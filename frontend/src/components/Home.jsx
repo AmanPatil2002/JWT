@@ -26,13 +26,19 @@ function Home() {
 
   if (loading) {
     return (
-<div class="loader">
-  <div class="dot dot-1"></div>
-  <div class="dot dot-2"></div>
-  <div class="dot dot-3"></div>
-  <div class="dot dot-4"></div>
-  <div class="dot dot-5"></div>
-</div>
+    // <!-- From Uiverse.io by anand_4957 --> 
+    <div>
+      <div class="loader">
+        <span><span></span><span></span><span></span><span></span></span>
+        <div class="base">
+          <span></span>
+          <div class="face"></div>
+        </div>
+      </div>
+      <div class="longfazers">
+        <span></span><span></span><span></span><span></span>
+      </div>
+    </div>
 
     );
   }

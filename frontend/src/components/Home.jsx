@@ -26,7 +26,6 @@ function Home() {
 
   if (loading) {
     return (
-    // <!-- From Uiverse.io by anand_4957 --> 
     <div>
       <div class="loader">
         <span><span></span><span></span><span></span><span></span></span>
@@ -53,7 +52,7 @@ function Home() {
               <span className="block text-white/90 text-3xl font-semibold animate-slide-up">Dashboard</span>
               <span className="block text-white/80 text-2xl animate-slide-up">Home Page</span>
             </div>
-            <p className="text-white/70 text-xl">Role</p>
+            <p className="text-white/70 text-xl">User</p>
           </div>
         </div>
       ) : role === "student" ? (

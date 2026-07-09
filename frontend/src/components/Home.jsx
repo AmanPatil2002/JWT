@@ -11,10 +11,7 @@ function Home() {
   useEffect(() => {
     const storedRole = localStorage.getItem("role") || "";
     const storedUsername = localStorage.getItem("username") || "";
-    
-    const userRole = storedRole || 
-      (storedUsername.toLowerCase() === "student" ? "student" : 
-       storedUsername.toLowerCase() === "teacher" ? "teacher" : "");
+    const userRole = storedRole || (storedUsername.toLowerCase() === "student" ? "student" : storedUsername.toLowerCase() === "teacher" ? "teacher" : "");
     
     setRole(userRole);
     setUsername(storedUsername);
@@ -38,7 +35,6 @@ function Home() {
         <span></span><span></span><span></span><span></span>
       </div>
     </div>
-
     );
   }
 
@@ -55,11 +51,7 @@ function Home() {
             <p className="text-white/70 text-xl">User</p>
           </div>
         </div>
-      ) : role === "student" ? (
-        <StudentPage username={username} />
-      ) : (
-        <TeacherPage username={username} />
-      )}
+      ) : role === "student" ? (<StudentPage username={username} />) : (<TeacherPage username={username} />)}
     </div>
   );
 }

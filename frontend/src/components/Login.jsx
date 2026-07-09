@@ -5,7 +5,6 @@ const API_URL = import.meta.env.VITE_API_URL;
 
 function Login() {
   const navigate = useNavigate();
-
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
 
@@ -18,7 +17,6 @@ function Login() {
       localStorage.setItem("role", res.data.role);
       alert("Login Successful");
       navigate("/home");
-
     } catch (err) {
       console.log(err);
       alert("Login Failed");

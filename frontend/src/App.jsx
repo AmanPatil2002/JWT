@@ -14,7 +14,6 @@ function App() {
         <Route path="/register" element={<Register />}/>
         <Route element={<ProtectedRoutes />}>
             <Route path="/home" element={<Home />}/>
-            <Route path="/contact" element={<Contact/>}/>
         </Route>
       </Routes>
     </BrowserRouter>

@@ -18,7 +18,6 @@ function Register() {
       localStorage.setItem("role", res.data.role || role);
       alert("Registration Successful");
       navigate("/");
-
     } catch (err) {
       console.log(err);
       alert("Registration Failed");
@@ -32,7 +31,6 @@ function Register() {
           <h2 className="text-3xl font-bold text-gray-800">Register</h2>
         </div>
         <form onSubmit={handleSubmit} className="space-y-5">
-         
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">Username</label>
             <input type="text" value={username} onChange={(e) =>setUsername(e.target.value)} className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" required />

@@ -16,8 +16,8 @@ import {
 const API_URL = import.meta.env.VITE_API_URL;
 
 export default function IntrestrdTable() {
-    const [intrest, setIntrest] = useState([])
-    const [profile, setProfile] = useState([])
+    const [intrest, setIntrest] = useState([]);
+    const [profile, setProfile] = useState([]);
 
     useEffect(() => {
         showIntrest();
@@ -27,7 +27,6 @@ export default function IntrestrdTable() {
     const showIntrest = async () => {
         try {
             const res = await axios.get(`${API_URL}/user/intrest`);
-            console.log("API Response:", res.data);
             setIntrest(res.data);
         } catch (err) {
             console.log("Error details:", err.response?.data || err.message);
@@ -37,107 +36,82 @@ export default function IntrestrdTable() {
     const showProfile = async () => {
         try {
             const res = await axios.get(`${API_URL}/profile/profile`);
-            console.log("API Response:", res.data);
             setProfile(res.data);
         } catch (err) {
             console.log("Error details:", err.response?.data || err.message);
         }
     };
 
+    // Find the profile that matches a given intrest entry
+    const getMatchedProfile = (user) => {
+        return profile.find((p) => p.RegisterID === user.RegisterID);
+    };
 
     return (
         <Box className="p-6">
-            <Typography
-                variant="h4"
-                align="center"
-                fontWeight="bold"
-                gutterBottom
-                className="mb-6 text-gray-800"
-            >
+            <Typography variant="h4" align="center" fontWeight="bold" gutterBottom className="mb-6 text-gray-800">
                 Intrest Table
             </Typography>
 
-            <Paper
-                elevation={3}
-                className="overflow-hidden rounded-lg"
-            >
+            <Paper elevation={3} className="overflow-hidden rounded-lg">
                 <TableContainer className="max-h-[600px]">
                     <Table stickyHeader>
                         <TableHead>
                             <TableRow>
-                                <TableCell
-                                    className="font-bold text-lg bg-gray-100 w-[5%]"
-                                    align="center"
-                                >
-                                    No
-                                </TableCell>
-                                <TableCell
-                                    className="font-bold text-lg bg-gray-100 w-[20%]"
-                                    align="center"
-                                >
-                                    User
-                                </TableCell>
-                                <TableCell
-                                    className="font-bold text-lg bg-gray-100 w-[40%]"
-                                    align="center"
-                                >
-                                    Intrested Profile
-                                </TableCell>
+                                <TableCell className="font-bold text-lg bg-gray-100 w-[5%]" align="center">No</TableCell>
+                                <TableCell className="font-bold text-lg bg-gray-100 w-[20%]" align="center">User</TableCell>
+                                <TableCell className="font-bold text-lg bg-gray-100 w-[40%]" align="center">Intrested Profile</TableCell>
                             </TableRow>
                         </TableHead>
                         <TableBody>
-                            {intrest.map((user, index) => (
-                                <TableRow
-                                    key={user.id}
-                                    className="hover:bg-gray-50 transition-colors"
-                                >
-                                    <TableCell
-                                        align="center"
-                                        className="py-4"
-                                    >
-                                        {index + 1}
-                                    </TableCell>
-                                    <TableCell
-                                        align="left"
-                                        className="py-4 font-medium"
-                                    >
-                                        <Grid container rowSpacing={1} columnSpacing={{ xs: 1, sm: 2, md: 3 }}>
-                                            <Grid size={12}>
-                                                <Box>
+                            {intrest.map((user, index) => {
+                                const matchedProfile = getMatchedProfile(user);
+                                return (
+                                    <TableRow key={user.id} className="hover:bg-gray-50 transition-colors">
+                                        <TableCell align="center" className="py-4">
+                                            {index + 1}
+                                        </TableCell>
+                                        <TableCell align="left" className="py-4 font-medium">
+                                            <Grid container rowSpacing={1} columnSpacing={{ xs: 1, sm: 2, md: 3 }}>
+                                                <Grid size={12}>
                                                     <Typography variant="body1">
-                                                        <b>Email : </b>{intrest.RequesterEmail}
+                                                        <b>Email: </b>{user.RequesterEmail}
                                                     </Typography>
-                                                </Box>
-                                            </Grid>
-                                            <Grid size={12}>
-                                                <Typography variant="body1">
-                                                    <b>Shown Intrest  : </b>{" "}
-                                                    {new Date(user.CreatedAt).toLocaleString("en-IN", {
-                                                        day: "2-digit",
-                                                        month: "long",
-                                                        year: "numeric",
-                                                        hour: "2-digit",
-                                                        minute: "2-digit",
-                                                        hour12: true,
-                                                    })}
-                                                </Typography>
-                                            </Grid>
-                                        </Grid>
-                                    </TableCell>
-                                    <TableCell
-                                        align="center"
-                                        className="py-4 text-gray-600"
-                                    >
-                                        <Box>
-                                            {profile.map((info) => (
-                                                <Grid>
-                                                    {info.RegisterID}
                                                 </Grid>
-                                            ))}
-                                        </Box>
-                                    </TableCell>
-                                </TableRow>
-                            ))}
+                                                <Grid size={12}>
+                                                    <Typography variant="body1">
+                                                        <b>Shown Intrest: </b>
+                                                        {new Date(user.CreatedAt).toLocaleString("en-IN", {
+                                                            day: "2-digit",
+                                                            month: "long",
+                                                            year: "numeric",
+                                                            hour: "2-digit",
+                                                            minute: "2-digit",
+                                                            hour12: true,
+                                                        })}
+                                                    </Typography>
+                                                </Grid>
+                                            </Grid>
+                                        </TableCell>
+                                        <TableCell align="center" className="py-4 text-gray-600">
+                                            {matchedProfile ? (
+                                                <Grid container rowSpacing={1}>
+                                                    <Grid size={12}>
+                                                        <Typography variant="body2">
+                                                            <b>Register ID:</b> {matchedProfile.RegisterID}
+                                                        </Typography>
+                                                    </Grid>
+                                                    {/* add more matchedProfile fields here, e.g. Name, Age, City */}
+                                                </Grid>
+                                            ) : (
+                                                <Typography variant="body2" color="text.secondary">
+                                                    No profile found
+                                                </Typography>
+                                            )}
+                                        </TableCell>
+                                    </TableRow>
+                                );
+                            })}
                         </TableBody>
                     </Table>
                 </TableContainer>

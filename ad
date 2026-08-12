@@ -1,83 +1,103 @@
-
 import {
     Box,
     Typography,
-
+    Drawer,
+    List,
+    ListItemButton,
+    ListItemIcon,
+    ListItemText,
+    Toolbar,
 } from "@mui/material";
 import SessionsChart from "../components/SessionChart";
 import * as React from 'react';
-import Tab from '@mui/material/Tab';
-import TabContext from '@mui/lab/TabContext';
-import TabList from '@mui/lab/TabList';
-import TabPanel from '@mui/lab/TabPanel';
 import UserTable from "../components/UserTable"
 import StoryTable from "../components/StoryTable";
 import ReviewTable from "../components/ReviewTable";
 import ProfileTable from "../components/ProfileTable";
 import QueryTable from "../components/QueryTable";
 
-function Admin() {
+import BarChartIcon from '@mui/icons-material/BarChart';
+import PeopleIcon from '@mui/icons-material/People';
+import AutoStoriesIcon from '@mui/icons-material/AutoStories';
+import RateReviewIcon from '@mui/icons-material/RateReview';
+import Person4Icon from '@mui/icons-material/Person4';
+import QueryStatsIcon from '@mui/icons-material/QueryStats';
 
+const DRAWER_WIDTH = 240;
+
+const NAV_ITEMS = [
+    { value: '1', label: 'Session', icon: <BarChartIcon /> },
+    { value: '2', label: 'User', icon: <PeopleIcon /> },
+    { value: '3', label: 'Success Stories', icon: <AutoStoriesIcon /> },
+    { value: '4', label: 'Review', icon: <RateReviewIcon /> },
+    { value: '5', label: 'All Profiles', icon: <Person4Icon /> },
+    { value: '6', label: 'Queries', icon: <QueryStatsIcon /> },
+];
+
+function Admin() {
     const [value, setValue] = React.useState('1');
 
-    const handleChange = (event, newValue) => {
-        setValue(newValue);
+    const renderPanel = () => {
+        switch (value) {
+            case '1':
+                return <SessionsChart />;
+            case '2':
+                return <UserTable />;
+            case '3':
+                return <StoryTable />;
+            case '4':
+                return <ReviewTable />;
+            case '5':
+                return <ProfileTable />;
+            case '6':
+                return <QueryTable />;
+            default:
+                return null;
+        }
     };
 
     return (
-        <Box sx={{ backgroundColor: "#f8f9fa", py: 6, paddingLeft: 8 }}>
-            <div className="container">
-                <Typography variant="h3" align="center" fontWeight="bold" gutterBottom>
-                    Admin
-                </Typography>
+        <Box sx={{ display: "flex", backgroundColor: "#f8f9fa", minHeight: "100vh" }}>
+            <Drawer
+                variant="permanent"
+                sx={{
+                    width: DRAWER_WIDTH,
+                    flexShrink: 0,
+                    "& .MuiDrawer-paper": {
+                        width: DRAWER_WIDTH,
+                        boxSizing: "border-box",
+                    },
+                }}
+            >
+                <Toolbar>
+                    <Typography variant="h6" fontWeight="bold" noWrap>
+                        Admin
+                    </Typography>
+                </Toolbar>
+                <List>
+                    {NAV_ITEMS.map((item) => (
+                        <ListItemButton
+                            key={item.value}
+                            selected={value === item.value}
+                            onClick={() => setValue(item.value)}
+                        >
+                            <ListItemIcon>{item.icon}</ListItemIcon>
+                            <ListItemText primary={item.label} />
+                        </ListItemButton>
+                    ))}
+                </List>
+            </Drawer>
 
-                <Box sx={{ width: '100%', typography: 'body1' }}>
-                    <TabContext value={value}>
-                        <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
-                            <TabList onChange={handleChange} aria-label="lab API tabs example">
-                                <Tab label="Session" value="1" />
-                                <Tab label="User" value="2" />
-                                <Tab label="Success Stories" value="3" />
-                                <Tab label="Review" value="4" />
-                                <Tab label="All Profiles" value="5" />
-                                <Tab label="Queries" value="6" />
-                            </TabList>
-                        </Box>
-                        <TabPanel value="1">
-                            <Box>
-                                <SessionsChart />
-                            </Box>
-                        </TabPanel>
-                        <TabPanel value="2">
-                            <Box>
-                                <UserTable/>
-                            </Box>
-                        </TabPanel>
-                        <TabPanel value="3">
-                            <Box>
-                                <StoryTable/>
-                            </Box>
-                        </TabPanel>
-                        <TabPanel value="4">
-                            <Box>
-                                <ReviewTable/>
-                            </Box>
-                        </TabPanel>
-                        <TabPanel value="5">
-                            <Box>
-                                <ProfileTable/>
-                            </Box>
-                        </TabPanel>
-                        <TabPanel value="6">
-                            <Box>
-                                <QueryTable/>
-                            </Box>
-                        </TabPanel>
-                    </TabContext>
+            <Box component="main" sx={{ flexGrow: 1, p: 4 }}>
+                <Typography variant="h4" fontWeight="bold" gutterBottom>
+                    {NAV_ITEMS.find((i) => i.value === value)?.label}
+                </Typography>
+                <Box sx={{ mt: 2 }}>
+                    {renderPanel()}
                 </Box>
-            </div>
+            </Box>
         </Box>
     );
 }
 
-export default Admin;adm
+export default Admin;

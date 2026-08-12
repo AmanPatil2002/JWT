@@ -1,103 +1,147 @@
+import Paper from '@mui/material/Paper';
+import { useState, useEffect } from "react";
+import axios from "axios";
 import {
     Box,
     Typography,
-    Drawer,
-    List,
-    ListItemButton,
-    ListItemIcon,
-    ListItemText,
-    Toolbar,
+    Table,
+    TableBody,
+    TableCell,
+    TableContainer,
+    TableHead,
+    TableRow,
+    Grid,
 } from "@mui/material";
-import SessionsChart from "../components/SessionChart";
-import * as React from 'react';
-import UserTable from "../components/UserTable"
-import StoryTable from "../components/StoryTable";
-import ReviewTable from "../components/ReviewTable";
-import ProfileTable from "../components/ProfileTable";
-import QueryTable from "../components/QueryTable";
 
-import BarChartIcon from '@mui/icons-material/BarChart';
-import PeopleIcon from '@mui/icons-material/People';
-import AutoStoriesIcon from '@mui/icons-material/AutoStories';
-import RateReviewIcon from '@mui/icons-material/RateReview';
-import Person4Icon from '@mui/icons-material/Person4';
-import QueryStatsIcon from '@mui/icons-material/QueryStats';
+const API_URL = import.meta.env.VITE_API_URL;
 
-const DRAWER_WIDTH = 240;
+export default function IntrestrdTable() {
+    const [intrest, setIntrest] = useState([])
+    const [profile, setProfile] = useState([])
 
-const NAV_ITEMS = [
-    { value: '1', label: 'Session', icon: <BarChartIcon /> },
-    { value: '2', label: 'User', icon: <PeopleIcon /> },
-    { value: '3', label: 'Success Stories', icon: <AutoStoriesIcon /> },
-    { value: '4', label: 'Review', icon: <RateReviewIcon /> },
-    { value: '5', label: 'All Profiles', icon: <Person4Icon /> },
-    { value: '6', label: 'Queries', icon: <QueryStatsIcon /> },
-];
+    useEffect(() => {
+        showIntrest();
+        showProfile();
+    }, []);
 
-function Admin() {
-    const [value, setValue] = React.useState('1');
-
-    const renderPanel = () => {
-        switch (value) {
-            case '1':
-                return <SessionsChart />;
-            case '2':
-                return <UserTable />;
-            case '3':
-                return <StoryTable />;
-            case '4':
-                return <ReviewTable />;
-            case '5':
-                return <ProfileTable />;
-            case '6':
-                return <QueryTable />;
-            default:
-                return null;
+    const showIntrest = async () => {
+        try {
+            const res = await axios.get(`${API_URL}/user/intrest`);
+            console.log("API Response:", res.data);
+            setIntrest(res.data);
+        } catch (err) {
+            console.log("Error details:", err.response?.data || err.message);
         }
     };
 
-    return (
-        <Box sx={{ display: "flex", backgroundColor: "#f8f9fa", minHeight: "100vh" }}>
-            <Drawer
-                variant="permanent"
-                sx={{
-                    width: DRAWER_WIDTH,
-                    flexShrink: 0,
-                    "& .MuiDrawer-paper": {
-                        width: DRAWER_WIDTH,
-                        boxSizing: "border-box",
-                    },
-                }}
-            >
-                <Toolbar>
-                    <Typography variant="h6" fontWeight="bold" noWrap>
-                        Admin
-                    </Typography>
-                </Toolbar>
-                <List>
-                    {NAV_ITEMS.map((item) => (
-                        <ListItemButton
-                            key={item.value}
-                            selected={value === item.value}
-                            onClick={() => setValue(item.value)}
-                        >
-                            <ListItemIcon>{item.icon}</ListItemIcon>
-                            <ListItemText primary={item.label} />
-                        </ListItemButton>
-                    ))}
-                </List>
-            </Drawer>
+    const showProfile = async () => {
+        try {
+            const res = await axios.get(`${API_URL}/profile/profile`);
+            console.log("API Response:", res.data);
+            setProfile(res.data);
+        } catch (err) {
+            console.log("Error details:", err.response?.data || err.message);
+        }
+    };
 
-            <Box component="main" sx={{ flexGrow: 1, p: 4 }}>
-                <Typography variant="h4" fontWeight="bold" gutterBottom>
-                    {NAV_ITEMS.find((i) => i.value === value)?.label}
-                </Typography>
-                <Box sx={{ mt: 2 }}>
-                    {renderPanel()}
-                </Box>
-            </Box>
+
+    return (
+        <Box className="p-6">
+            <Typography
+                variant="h4"
+                align="center"
+                fontWeight="bold"
+                gutterBottom
+                className="mb-6 text-gray-800"
+            >
+                Intrest Table
+            </Typography>
+
+            <Paper
+                elevation={3}
+                className="overflow-hidden rounded-lg"
+            >
+                <TableContainer className="max-h-[600px]">
+                    <Table stickyHeader>
+                        <TableHead>
+                            <TableRow>
+                                <TableCell
+                                    className="font-bold text-lg bg-gray-100 w-[5%]"
+                                    align="center"
+                                >
+                                    No
+                                </TableCell>
+                                <TableCell
+                                    className="font-bold text-lg bg-gray-100 w-[20%]"
+                                    align="center"
+                                >
+                                    User
+                                </TableCell>
+                                <TableCell
+                                    className="font-bold text-lg bg-gray-100 w-[40%]"
+                                    align="center"
+                                >
+                                    Intrested Profile
+                                </TableCell>
+                            </TableRow>
+                        </TableHead>
+                        <TableBody>
+                            {intrest.map((user, index) => (
+                                <TableRow
+                                    key={user.id}
+                                    className="hover:bg-gray-50 transition-colors"
+                                >
+                                    <TableCell
+                                        align="center"
+                                        className="py-4"
+                                    >
+                                        {index + 1}
+                                    </TableCell>
+                                    <TableCell
+                                        align="left"
+                                        className="py-4 font-medium"
+                                    >
+                                        <Grid container rowSpacing={1} columnSpacing={{ xs: 1, sm: 2, md: 3 }}>
+                                            <Grid size={12}>
+                                                <Box>
+                                                    <Typography variant="body1">
+                                                        <b>Email : </b>{intrest.RequesterEmail}
+                                                    </Typography>
+                                                </Box>
+                                            </Grid>
+                                            <Grid size={12}>
+                                                <Typography variant="body1">
+                                                    <b>Shown Intrest  : </b>{" "}
+                                                    {new Date(user.CreatedAt).toLocaleString("en-IN", {
+                                                        day: "2-digit",
+                                                        month: "long",
+                                                        year: "numeric",
+                                                        hour: "2-digit",
+                                                        minute: "2-digit",
+                                                        hour12: true,
+                                                    })}
+                                                </Typography>
+                                            </Grid>
+                                        </Grid>
+                                    </TableCell>
+                                    <TableCell
+                                        align="center"
+                                        className="py-4 text-gray-600"
+                                    >
+                                        <Box>
+                                            {profile.map((info) => (
+                                                <Grid>
+                                                    {info.RegisterID}
+                                                </Grid>
+                                            ))}
+                                        </Box>
+                                    </TableCell>
+                                </TableRow>
+                            ))}
+                        </TableBody>
+                    </Table>
+                </TableContainer>
+            </Paper>
         </Box>
     );
 }
-
-export default Admin;

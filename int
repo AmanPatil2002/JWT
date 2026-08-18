@@ -23,7 +23,6 @@ import { styled } from "@mui/material/styles";
 import PersonIcon from '@mui/icons-material/Person';
 import LocationOnIcon from '@mui/icons-material/LocationOn';
 import SchoolIcon from '@mui/icons-material/School';
-import CallIcon from '@mui/icons-material/Call';
 import EmailIcon from '@mui/icons-material/Email';
 import AccessibleIcon from '@mui/icons-material/Accessible';
 import AccessibilityIcon from '@mui/icons-material/Accessibility';
@@ -67,6 +66,7 @@ export default function Match() {
     const [profiles, setProfiles] = useState([]);
     const [filteredProfiles, setFilteredProfiles] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(false);
     const [selectedProfile, setSelectedProfile] = useState(null);
     const [detailOpen, setDetailOpen] = useState(false);
 
@@ -78,11 +78,13 @@ export default function Match() {
         } else {
             setProfiles([]);
             setFilteredProfiles([]);
+            setLoading(false);
         }
     }, [currentUserEmail]);
 
     const fetchInterestedProfiles = async () => {
         setLoading(true);
+        setError(false);
 
         try {
             const res = await axios.get(
@@ -106,6 +108,7 @@ export default function Match() {
 
             setProfiles([]);
             setFilteredProfiles([]);
+            setError(true);
         } finally {
             setLoading(false);
         }
@@ -128,8 +131,9 @@ export default function Match() {
         <Dialog
             open={detailOpen}
             onClose={() => setDetailOpen(false)}
-            maxWidth="80%"
             fullWidth
+            maxWidth="lg"
+            sx={{ '& .MuiDialog-paper': { maxWidth: '80%' } }}
         >
             {selectedProfile && (
 
@@ -221,13 +225,13 @@ export default function Match() {
                                     <Grid size={{ xs: 2, sm: 4, md: 3 }}>
                                         <Typography variant="body2" color="text.secondary">
                                             <HeightIcon fontSize="small" sx={{ verticalAlign: 'middle', mr: 0.5 }} />
-                                            {`${selectedProfile.Height} ft`}
+                                            {selectedProfile.Height ? `${selectedProfile.Height} ft` : 'Not specified'}
                                         </Typography>
                                     </Grid>
                                     <Grid size={{ xs: 2, sm: 4, md: 3 }}>
                                         <Typography variant="body2" color="text.secondary">
                                             <AccessibilityIcon fontSize="small" sx={{ verticalAlign: 'middle', mr: 0.5 }} />
-                                            {`${selectedProfile.Age} years`}
+                                            {selectedProfile.Age ? `${selectedProfile.Age} years` : 'Not specified'}
                                         </Typography>
                                     </Grid>
                                 </Grid>
@@ -301,9 +305,10 @@ export default function Match() {
                                                 <IconButton
                                                     color="success"
                                                     component="a"
-                                                    href={`https://wa.me/${selectedProfile.Contact}`}
+                                                    href={selectedProfile.Contact ? `https://wa.me/${selectedProfile.Contact.replace(/\D/g, '')}` : undefined}
                                                     target="_blank"
                                                     rel="noopener noreferrer"
+                                                    disabled={!selectedProfile.Contact}
                                                     sx={{
                                                         border: "1px solid",
                                                         borderColor: "success.main",
@@ -318,7 +323,8 @@ export default function Match() {
                                                 <IconButton
                                                     color="primary"
                                                     component="a"
-                                                    href={`mailto:${selectedProfile.Email}`}
+                                                    href={selectedProfile.Email ? `mailto:${selectedProfile.Email}` : undefined}
+                                                    disabled={!selectedProfile.Email}
                                                     sx={{
                                                         border: "1px solid",
                                                         borderColor: "primary.main",
@@ -329,14 +335,14 @@ export default function Match() {
                                                 >
                                                     <EmailIcon />
                                                 </IconButton>
-                                                
+
                                             </Box>
                                         ) : (
                                             <Box>
                                                 <Button onClick={() => navigate("/profile")} variant="contained">
-                                                <Typography variant="body1" sx={{ lineHeight: 1.8 , color:"White"}}>
-                                                    Get Premium Subscription
-                                                </Typography>
+                                                    <Typography variant="body1" sx={{ lineHeight: 1.8, color: "White" }}>
+                                                        Get Premium Subscription
+                                                    </Typography>
                                                 </Button>
                                             </Box>
                                         )}
@@ -354,7 +360,7 @@ export default function Match() {
     );
 
     const ProfileCardSkeleton = () => (
-        <Grid item xs={12} sm={6} md={4} lg={3}>
+        <Grid size={{ xs: 12, sm: 6, md: 4, lg: 3 }}>
             <Card>
                 <Skeleton variant="rectangular" height={200} />
                 <CardContent>
@@ -391,6 +397,23 @@ export default function Match() {
                                     <ProfileCardSkeleton key={index} />
                                 ))}
                             </Grid>
+                        ) : error ? (
+                            <Box textAlign="center" py={8}>
+                                <PersonIcon sx={{ fontSize: 80, color: 'text.secondary', mb: 2 }} />
+                                <Typography variant="h5" color="text.secondary" gutterBottom>
+                                    Couldn't load your interested profiles
+                                </Typography>
+                                <Typography variant="body2" color="text.secondary" gutterBottom>
+                                    Something went wrong. Please try again.
+                                </Typography>
+                                <Button
+                                    variant="outlined"
+                                    onClick={fetchInterestedProfiles}
+                                    sx={{ mt: 2 }}
+                                >
+                                    Retry
+                                </Button>
+                            </Box>
                         ) : filteredProfiles.length === 0 ? (
                             <Box textAlign="center" py={8}>
                                 <PersonIcon sx={{ fontSize: 80, color: 'text.secondary', mb: 2 }} />
@@ -454,12 +477,18 @@ export default function Match() {
                                                         )}
                                                 </Box>
                                                 <div>
-                                                    <Box sx={{ display: 'flex', mt: 1, color: 'text.secondary', justifyContent: 'center' }}>
-                                                        <EmailIcon fontSize="small" sx={{ mr: 0.5 }} />
-                                                        <Typography variant="body2" noWrap>
-                                                            {profile.Email || 'Not specified'}
+                                                    {profile.Member === "Premium" ? (
+                                                        <Box sx={{ display: 'flex', mt: 1, color: 'text.secondary', justifyContent: 'center' }}>
+                                                            <EmailIcon fontSize="small" sx={{ mr: 0.5 }} />
+                                                            <Typography variant="body2" noWrap>
+                                                                {profile.Email || 'Not specified'}
+                                                            </Typography>
+                                                        </Box>
+                                                    ) : (
+                                                        <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+                                                            Tap to view details
                                                         </Typography>
-                                                    </Box>
+                                                    )}
 
                                                     <Box>
                                                         {profile.Physically === 'Yes' ? (

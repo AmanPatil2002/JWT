@@ -89,7 +89,7 @@ export default function Match() {
 
     const [hasProfile, setHasProfile] = useState(false);
     const [checkingProfile, setCheckingProfile] = useState(true);
-
+    const [currentUserGender, setCurrentUserGender] = useState(null);
 
 
     useEffect(() => {
@@ -98,24 +98,25 @@ export default function Match() {
     }, []);
 
     const checkOwnProfile = async () => {
-        const userEmail = localStorage.getItem("email");
-        if (!userEmail) {
-            setHasProfile(false);
-            setCheckingProfile(false);
-            return;
-        }
-        try {
-            const res = await axios.get(`${API_URL}/profile/profile`);
-            const allProfiles = Array.isArray(res.data) ? res.data : [res.data];
-            const mine = allProfiles.find(p => p.Email === userEmail);   
-            setHasProfile(Boolean(mine?.RegisterID));
-        } catch (err) {
-            console.log("Error checking own profile:", err);
-            setHasProfile(false);
-        } finally {
-            setCheckingProfile(false);
-        }
-    };
+    const userEmail = localStorage.getItem("email");
+    if (!userEmail) {
+        setHasProfile(false);
+        setCheckingProfile(false);
+        return;
+    }
+    try {
+        const res = await axios.get(`${API_URL}/profile/profile`);
+        const allProfiles = Array.isArray(res.data) ? res.data : [res.data];
+        const mine = allProfiles.find(p => p.Email === userEmail);
+        setHasProfile(Boolean(mine?.RegisterID));
+        setCurrentUserGender(mine?.Gender || null); // add this
+    } catch (err) {
+        console.log("Error checking own profile:", err);
+        setHasProfile(false);
+    } finally {
+        setCheckingProfile(false);
+    }
+};
 
 
     const fetchProfiles = async () => {
@@ -184,37 +185,42 @@ export default function Match() {
 
 
     const applyFilters = useCallback(() => {
-        let filtered = [...profiles];
+    let filtered = [...profiles];
 
-        if (searchTerm) {
-            const term = searchTerm.toLowerCase();
-            filtered = filtered.filter(profile =>
-                profile.Name?.toLowerCase().includes(term) ||
-                profile.Occupation?.toLowerCase().includes(term) ||
-                profile.Education?.toLowerCase().includes(term) ||
-                profile.Address?.toLowerCase().includes(term)
-            );
-        }
-        if (filters.gender) {
-            filtered = filtered.filter(profile => profile.Gender === filters.gender);
-        }
-        if (filters.religion) {
-            filtered = filtered.filter(profile => profile.Religion === filters.religion);
-        }
-        if (filters.language) {
-            filtered = filtered.filter(profile => profile.Language === filters.language);
-        }
-        if (filters.minAge) {
-            filtered = filtered.filter(profile => profile.Age >= parseInt(filters.minAge));
-        }
-        if (filters.maxAge) {
-            filtered = filtered.filter(profile => profile.Age <= parseInt(filters.maxAge));
-        }
-        if (filters.maritalStatus) {
-            filtered = filtered.filter(profile => profile.Status === filters.maritalStatus);
-        }
-        setFilteredProfiles(filtered);
-    }, [profiles, searchTerm, filters]);
+    if (currentUserGender) {
+        const oppositeGender = currentUserGender === 'Male' ? 'Female' : 'Male';
+        filtered = filtered.filter(profile => profile.Gender === oppositeGender);
+    }
+
+    if (searchTerm) {
+        const term = searchTerm.toLowerCase();
+        filtered = filtered.filter(profile =>
+            profile.Name?.toLowerCase().includes(term) ||
+            profile.Occupation?.toLowerCase().includes(term) ||
+            profile.Education?.toLowerCase().includes(term) ||
+            profile.Address?.toLowerCase().includes(term)
+        );
+    }
+    if (filters.gender) {
+        filtered = filtered.filter(profile => profile.Gender === filters.gender);
+    }
+    if (filters.religion) {
+        filtered = filtered.filter(profile => profile.Religion === filters.religion);
+    }
+    if (filters.language) {
+        filtered = filtered.filter(profile => profile.Language === filters.language);
+    }
+    if (filters.minAge) {
+        filtered = filtered.filter(profile => profile.Age >= parseInt(filters.minAge));
+    }
+    if (filters.maxAge) {
+        filtered = filtered.filter(profile => profile.Age <= parseInt(filters.maxAge));
+    }
+    if (filters.maritalStatus) {
+        filtered = filtered.filter(profile => profile.Status === filters.maritalStatus);
+    }
+    setFilteredProfiles(filtered);
+}, [profiles, searchTerm, filters, currentUserGender]); // add currentUserGender to deps
 
     useEffect(() => {
         applyFilters();

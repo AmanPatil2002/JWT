@@ -69,7 +69,10 @@ export default function Match() {
     const [error, setError] = useState(false);
     const [selectedProfile, setSelectedProfile] = useState(null);
     const [detailOpen, setDetailOpen] = useState(false);
-    const [intrested, setIntrested] = useState("");
+    // Track which profiles the current user has accepted, per-profile
+    // instead of a single shared string (that was the root bug: one
+    // shared "intrested" value doesn't work for a list of cards).
+    const [acceptedIds, setAcceptedIds] = useState(new Set());
     const currentUserEmail = localStorage.getItem('email');
 
     useEffect(() => {
@@ -115,21 +118,21 @@ export default function Match() {
     //----------------------------------------------------------------------------------------------------------------------------------
 
     const Addintrest = async (profile) => {
-        if (!intrested) return;
         setLoading(true);
         try {
             const res = await axios.put(
                 `${API_URL}/user/intrest/${encodeURIComponent(currentUserEmail)}`,
                 {
-                    intrest: intrested,
+                    intrest: "Yes",
                     requesterEmail: currentUserEmail,
                     profileId: profile.RegisterID,
                 }
             );
 
             console.log("Interest updated:", res.data);
-            alert("Request accepted")
-            setIntrested("");
+            alert("Request accepted");
+            // Mark just this profile as accepted, leaving the rest untouched
+            setAcceptedIds((prev) => new Set(prev).add(profile.RegisterID));
 
         } catch (err) {
             console.error(
@@ -450,10 +453,12 @@ export default function Match() {
                             </Box>
                         ) : (
                             <Grid container spacing={{ xs: 2, md: 3 }} columns={{ xs: 4, sm: 8, md: 12 }}>
-                                {filteredProfiles.map((profile) => (
+                                {filteredProfiles.map((profile) => {
+                                    const isAccepted = acceptedIds.has(profile.RegisterID);
 
-                                    {
-                                        intrested = 'No' ? (
+                                    if (!isAccepted) {
+                                        // Not yet accepted: minimal card, just avatar + Accept button
+                                        return (
                                             <Grid size={{ xs: 2, sm: 2, md: 3 }} key={profile.RegisterID}>
                                                 <CardMedia
                                                     component="div"
@@ -486,127 +491,114 @@ export default function Match() {
                                                         variant="contained"
                                                         color="success"
                                                         disabled={loading}
-                                                        onClick={() => {
-                                                            setIntrested("Yes");
-                                                            Addintrest(profile);
-                                                        }}
+                                                        onClick={() => Addintrest(profile)}
                                                     >
                                                         Accept
                                                     </Button>
                                                 </Box>
                                             </Grid>
-                                        ) : (
-                                            < Grid size={{ xs: 2, sm: 2, md: 3 }} key={profile.RegisterID}>
-                                                <ProfileCard onClick={() => handleProfileClick(profile)}>
-                                                    <CardMedia
-                                                        component="div"
-                                                        sx={{
-                                                            height: 200,
-                                                            background: profile.Gender === 'Female'
-                                                                ? 'linear-gradient(135deg,rgb(245, 118, 160) 0%, #f8bbd0 100%)'
-                                                                : 'linear-gradient(135deg,rgb(29, 156, 248) 0%, #bbdefb 100%)',
-                                                            display: 'flex',
-                                                            alignItems: 'center',
-                                                            justifyContent: 'center',
-                                                        }}
-                                                    >
-                                                        <Avatar
-                                                            src={getImageUrl(profile.Image)}
-                                                            alt={profile.Name}
-                                                            sx={{
-                                                                width: 120,
-                                                                height: 120,
-                                                                border: '4px solid white',
-                                                                boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
-                                                            }}
-                                                        >
-                                                            <PersonIcon sx={{ fontSize: 60, color: '#9e9e9e' }} />
-                                                        </Avatar>
-                                                    </CardMedia>
-                                                    <CardContent sx={{ textAlign: 'center' }}>
-                                                        <Typography variant="h6" gutterBottom sx={{ color: '#c2185b' }}>
-                                                            {profile.Name}
-                                                        </Typography>
-                                                        <Box sx={{ mb: 1 }}>
-                                                            <Chip
-                                                                label={`${profile.Age} yrs`}
-                                                                size="small"
-                                                                color="black"
-                                                                sx={{ mr: 1, mb: 1 }}
-                                                            />
-
-                                                            {profile.Status == "Single"
-                                                                ? (
-                                                                    <Chip label={profile.Status} size="small"
-                                                                        variant="outlined"
-                                                                        sx={{ mr: 1, mb: 1, color: '#66BB6A', }} />
-                                                                ) : (
-                                                                    <Chip label={profile.Status} size="small"
-                                                                        variant="outlined"
-                                                                        color="primary"
-                                                                        sx={{ mr: 1, mb: 1, color: '#2c73d2', }} />
-                                                                )}
-                                                        </Box>
-                                                        <div>
-                                                            {profile.Member === "Premium" ? (
-                                                                <Box sx={{ display: 'flex', mt: 1, color: 'text.secondary', justifyContent: 'center' }}>
-                                                                    <EmailIcon fontSize="small" sx={{ mr: 0.5 }} />
-                                                                    <Typography variant="body2" noWrap>
-                                                                        {profile.Email || 'Not specified'}
-                                                                    </Typography>
-                                                                </Box>
-                                                            ) : (
-                                                                <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-                                                                    Tap to view details
-                                                                </Typography>
-                                                            )}
-
-                                                            <Box>
-                                                                {profile.Physically === 'Yes' ? (
-                                                                    <>
-                                                                        <Typography variant="body2" color='warning' >
-                                                                            <AccessibleIcon fontSize="small" sx={{ verticalAlign: 'middle', mr: 0.5 }} />
-                                                                            Physically Challenged
-                                                                        </Typography>
-                                                                    </>
-                                                                ) : (
-                                                                    <Typography variant="body2" color='success'>
-                                                                        <AccessibilityIcon fontSize="small" sx={{ verticalAlign: 'middle', mr: 0.5 }} />
-                                                                        Not Physically Challenged
-                                                                    </Typography>
-                                                                )}
-                                                            </Box>
-                                                        </div>
-
-                                                    </CardContent>
-
-                                                </ProfileCard>
-                                                <Box sx={{ p: 2 }}>
-                                                    <Button
-                                                        fullWidth
-                                                        variant="contained"
-                                                        color="success"
-                                                        disabled={loading}
-                                                        onClick={() => {
-                                                            setIntrested("Yes");
-                                                            Addintrest(profile);
-                                                        }}
-                                                    >
-                                                        Accept
-                                                    </Button>
-                                                </Box>
-                                            </Grid>
-                                        )
+                                        );
                                     }
 
+                                    // Already accepted: full detail card
+                                    return (
+                                        <Grid size={{ xs: 2, sm: 2, md: 3 }} key={profile.RegisterID}>
+                                            <ProfileCard onClick={() => handleProfileClick(profile)}>
+                                                <CardMedia
+                                                    component="div"
+                                                    sx={{
+                                                        height: 200,
+                                                        background: profile.Gender === 'Female'
+                                                            ? 'linear-gradient(135deg,rgb(245, 118, 160) 0%, #f8bbd0 100%)'
+                                                            : 'linear-gradient(135deg,rgb(29, 156, 248) 0%, #bbdefb 100%)',
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        justifyContent: 'center',
+                                                    }}
+                                                >
+                                                    <Avatar
+                                                        src={getImageUrl(profile.Image)}
+                                                        alt={profile.Name}
+                                                        sx={{
+                                                            width: 120,
+                                                            height: 120,
+                                                            border: '4px solid white',
+                                                            boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
+                                                        }}
+                                                    >
+                                                        <PersonIcon sx={{ fontSize: 60, color: '#9e9e9e' }} />
+                                                    </Avatar>
+                                                </CardMedia>
+                                                <CardContent sx={{ textAlign: 'center' }}>
+                                                    <Typography variant="h6" gutterBottom sx={{ color: '#c2185b' }}>
+                                                        {profile.Name}
+                                                    </Typography>
+                                                    <Box sx={{ mb: 1 }}>
+                                                        <Chip
+                                                            label={`${profile.Age} yrs`}
+                                                            size="small"
+                                                            sx={{ mr: 1, mb: 1 }}
+                                                        />
 
+                                                        {profile.Status === "Single" ? (
+                                                            <Chip label={profile.Status} size="small"
+                                                                variant="outlined"
+                                                                sx={{ mr: 1, mb: 1, color: '#66BB6A' }} />
+                                                        ) : (
+                                                            <Chip label={profile.Status} size="small"
+                                                                variant="outlined"
+                                                                color="primary"
+                                                                sx={{ mr: 1, mb: 1, color: '#2c73d2' }} />
+                                                        )}
+                                                    </Box>
+                                                    <div>
+                                                        {profile.Member === "Premium" ? (
+                                                            <Box sx={{ display: 'flex', mt: 1, color: 'text.secondary', justifyContent: 'center' }}>
+                                                                <EmailIcon fontSize="small" sx={{ mr: 0.5 }} />
+                                                                <Typography variant="body2" noWrap>
+                                                                    {profile.Email || 'Not specified'}
+                                                                </Typography>
+                                                            </Box>
+                                                        ) : (
+                                                            <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+                                                                Tap to view details
+                                                            </Typography>
+                                                        )}
 
-                                ))}
+                                                        <Box>
+                                                            {profile.Physically === 'Yes' ? (
+                                                                <Typography variant="body2" color="warning">
+                                                                    <AccessibleIcon fontSize="small" sx={{ verticalAlign: 'middle', mr: 0.5 }} />
+                                                                    Physically Challenged
+                                                                </Typography>
+                                                            ) : (
+                                                                <Typography variant="body2" color="success">
+                                                                    <AccessibilityIcon fontSize="small" sx={{ verticalAlign: 'middle', mr: 0.5 }} />
+                                                                    Not Physically Challenged
+                                                                </Typography>
+                                                            )}
+                                                        </Box>
+                                                    </div>
+                                                </CardContent>
+                                            </ProfileCard>
+                                            <Box sx={{ p: 2 }}>
+                                                <Button
+                                                    fullWidth
+                                                    variant="contained"
+                                                    color="success"
+                                                    disabled
+                                                >
+                                                    Accepted
+                                                </Button>
+                                            </Box>
+                                        </Grid>
+                                    );
+                                })}
                             </Grid>
                         )}
                     </StyledPaper>
                 </Container>
-            </Box >
+            </Box>
             <ProfileDetailDialog />
         </>
     );

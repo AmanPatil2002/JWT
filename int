@@ -214,6 +214,7 @@ export default function Match() {
     const [error, setError] = useState(false);
     const [selectedProfile, setSelectedProfile] = useState(null);
     const [detailOpen, setDetailOpen] = useState(false);
+    const [intrested, setIntrested] = useState("");
 
     const currentUserEmail = localStorage.getItem('email');
 
@@ -256,6 +257,41 @@ export default function Match() {
             setLoading(false);
         }
     };
+
+    //----------------------------------------------------------------------------------------------------------------------------------
+
+    const Addintrest = async (profile) => {
+        if (!intrested) return;
+
+        setLoading(true);
+
+        try {
+            const formData = new FormData();
+
+            formData.append("Intrest", intrested);
+            formData.append("requesterEmail", currentUserEmail);
+            formData.append("profileId", profile.RegisterID);
+
+            const res = await axios.put(
+                `${API_URL}/user/intrest/${encodeURIComponent(currentUserEmail)}`,
+                formData
+            );
+
+            console.log("Interest updated:", res.data);
+            setIntrested("");
+
+        } catch (err) {
+            console.error(
+                "Error updating interest:",
+                err.response?.data || err.message
+            );
+        } finally {
+            setLoading(false);
+        }
+    };
+
+
+    //----------------------------------------------------------------------------------------------------------------------------
 
     const handleProfileClick = (profile) => {
         setSelectedProfile(profile);
@@ -647,6 +683,21 @@ export default function Match() {
                                                 </div>
 
                                             </CardContent>
+                                            <Box sx={{ p: 2 }}>
+                                                <Button
+                                                    fullWidth
+                                                    variant="contained"
+                                                    color="success"
+                                                    disabled={loading}
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        setIntrested("Yes");
+                                                        Addintrest(profile);
+                                                    }}
+                                                >
+                                                    Accept
+                                                </Button>
+                                            </Box>
                                         </ProfileCard>
                                     </Grid>
                                 ))}

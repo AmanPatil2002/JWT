@@ -1,0 +1,22 @@
+const express = require("express");
+const router = express.Router();
+const {
+    addInterested,
+    getInterested,
+    AllInterested,
+    updateInterest,
+    deleteInterest,
+    getYesInterested,
+    getNoInterested
+} = require("../controller/intrestcontroller");
+
+
+router.post("/intrest", addInterested);
+router.get("/intrest/:email", getInterested);
+router.get("/intrest",AllInterested)
+router.put("/intrest/:email", updateInterest);
+router.delete("/intrest/:email", deleteInterest);
+router.get("/status/No/:email", getNoInterested);
+router.get("/status/Yes/:email", getYesInterested);
+
+module.exports = router;

@@ -226,3 +226,112 @@ export default function ShowIntrest() {
                                             )}
                                             <CardContent>
                                                 <Box display="flex" alignItems="center" gap={1} mb={1}>
+                                                    <Avatar>{profile.Name?.[0]?.toUpperCase()}</Avatar>
+                                                    <Typography variant="subtitle1" fontWeight={600}>
+                                                        {profile.Name}
+                                                    </Typography>
+                                                </Box>
+
+                                                {profile.Location && (
+                                                    <Box display="flex" alignItems="center" gap={0.5} color="text.secondary">
+                                                        <LocationOnIcon fontSize="small" />
+                                                        <Typography variant="body2">{profile.Location}</Typography>
+                                                    </Box>
+                                                )}
+
+                                                {profile.Education && (
+                                                    <Box display="flex" alignItems="center" gap={0.5} color="text.secondary">
+                                                        <SchoolIcon fontSize="small" />
+                                                        <Typography variant="body2">{profile.Education}</Typography>
+                                                    </Box>
+                                                )}
+
+                                                {profile.Intrest && (
+                                                    <Chip
+                                                        label={profile.Intrest}
+                                                        size="small"
+                                                        sx={{ mt: 1 }}
+                                                    />
+                                                )}
+
+                                                <Box display="flex" justifyContent="flex-end" mt={1}>
+                                                    <IconButton
+                                                        aria-label="delete"
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            deleteintrest(profile);
+                                                        }}
+                                                    >
+                                                        <DeleteIcon />
+                                                    </IconButton>
+                                                </Box>
+                                            </CardContent>
+                                        </IntrestCard>
+                                    </Grid>
+                                ))}
+                            </Grid>
+                        )}
+                    </StyledPaper>
+                </Container>
+            </Box>
+
+            {/* Profile detail dialog */}
+            <Dialog open={detailOpen} onClose={handleCloseDetail} maxWidth="sm" fullWidth>
+                <DialogTitle>{selectedProfile?.Name}</DialogTitle>
+                <DialogContent dividers>
+                    {selectedProfile && (
+                        <Box display="flex" flexDirection="column" gap={1.5}>
+                            {selectedProfile.ProfileImage && (
+                                <Box
+                                    component="img"
+                                    src={getImageUrl(selectedProfile.ProfileImage)}
+                                    alt={selectedProfile.Name}
+                                    sx={{ width: '100%', borderRadius: 2, maxHeight: 300, objectFit: 'cover' }}
+                                />
+                            )}
+                            {selectedProfile.Location && (
+                                <Box display="flex" alignItems="center" gap={1}>
+                                    <LocationOnIcon fontSize="small" />
+                                    <Typography>{selectedProfile.Location}</Typography>
+                                </Box>
+                            )}
+                            {selectedProfile.Education && (
+                                <Box display="flex" alignItems="center" gap={1}>
+                                    <SchoolIcon fontSize="small" />
+                                    <Typography>{selectedProfile.Education}</Typography>
+                                </Box>
+                            )}
+                            {selectedProfile.Email && (
+                                <Box display="flex" alignItems="center" gap={1}>
+                                    <EmailIcon fontSize="small" />
+                                    <Typography>{selectedProfile.Email}</Typography>
+                                </Box>
+                            )}
+
+                            <TextField
+                                label="Your message / interest note"
+                                value={intrested}
+                                onChange={(e) => setIntrested(e.target.value)}
+                                multiline
+                                minRows={2}
+                                fullWidth
+                            />
+                        </Box>
+                    )}
+                </DialogContent>
+                <DialogActions>
+                    <Button onClick={handleCloseDetail}>Close</Button>
+                    <Button
+                        variant="contained"
+                        onClick={() => {
+                            Addintrest(selectedProfile);
+                            handleCloseDetail();
+                        }}
+                    >
+                        Save
+                    </Button>
+                </DialogActions>
+            </Dialog>
+        </>
+    );
+}

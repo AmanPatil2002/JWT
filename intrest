@@ -1,121 +1,49 @@
-<Grid size={{ xs: 2, sm: 2, md: 3 }} key={profile.RegisterID}>
-    {profile.Intrest === "No" && (
-        <Grid>
-            <ProfileCard>
-                <CardMedia
-                    component="div"
-                    sx={{
-                        height: 200,
-                        background:
-                            profile.Gender === 'Female'
-                                ? 'linear-gradient(135deg,rgb(245, 118, 160) 0%, #f8bbd0 100%)'
-                                : 'linear-gradient(135deg,rgb(29, 156, 248) 0%, #bbdefb 100%)',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                    }}
-                >
-                    <Avatar
-                        src={getImageUrl(profile.Image)}
-                        alt={profile.Name}
-                        sx={{
-                            width: 120,
-                            height: 120,
-                            border: '4px solid white',
-                            boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
-                        }}
-                    >
-                        <PersonIcon sx={{ fontSize: 60, color: '#9e9e9e' }} />
-                    </Avatar>
-                </CardMedia>
-                <CardContent sx={{ textAlign: 'center' }}>
-                    <Typography variant="h6" gutterBottom sx={{ color: '#c2185b' }}>
-                        {profile.Name}
-                    </Typography>
-                    <Grid container spacing={2} columns={{ xs: 6, sm: 8, md: 12 }}>
-                        <Grid size={{ xs: 6, sm: 4, md: 6 }}>
-                            <Button
-                                fullWidth
-                                variant="contained"
-                                color="success"
-                                disabled={loading}
-                                onClick={() => {
-                                    setIntrested("Yes");
-                                    Addintrest(profile);
-                                }}
-                            >
-                                Accept
-                            </Button>
-                        </Grid>
+{currentUserMember === 'Premium' ? (
+    <Box
+        sx={{
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 1.5,
+            width: '100%',
+        }}
+    >
+        <Button
+            color="success"
+            component="a"
+            href={
+                selectedProfile.Contact
+                    ? `https://wa.me/${selectedProfile.Contact.replace(/\D/g, '')}`
+                    : undefined
+            }
+            target="_blank"
+            rel="noopener noreferrer"
+            disabled={!selectedProfile.Contact}
+            variant="outlined"
+            startIcon={<WhatsAppIcon />}
+            sx={{ width: '100%', minHeight: 48, borderRadius: 2, justifyContent: 'center' }}
+        >
+            WhatsApp
+        </Button>
 
-                        <Grid size={{ xs: 6, sm: 4, md: 6 }}>
-                            <Button
-                                fullWidth
-                                variant="contained"
-                                color="error"
-                                disabled={loading}
-                                onClick={() => {
-                                    deleteintrest(profile);
-                                }}
-                            >
-                                Decline
-                            </Button>
-                        </Grid>
-                    </Grid>
-                </CardContent>
-            </ProfileCard>
-        </Grid>
-    )}
-
-    {profile.Intrest === "Yes" && (
-        <Grid>
-            <ProfileCard onClick={() => handleProfileClick(profile)}>
-                <CardMedia
-                    component="div"
-                    sx={{
-                        height: 200,
-                        background:
-                            profile.Gender === 'Female'
-                                ? 'linear-gradient(135deg,rgb(245, 118, 160) 0%, #f8bbd0 100%)'
-                                : 'linear-gradient(135deg,rgb(29, 156, 248) 0%, #bbdefb 100%)',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                    }}
-                >
-                    <Avatar
-                        src={getImageUrl(profile.Image)}
-                        alt={profile.Name}
-                        sx={{
-                            width: 120,
-                            height: 120,
-                            border: '4px solid white',
-                            boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
-                        }}
-                    >
-                        <PersonIcon sx={{ fontSize: 60, color: '#9e9e9e' }} />
-                    </Avatar>
-                </CardMedia>
-                <CardContent sx={{ textAlign: 'center' }}>
-                    <Typography variant="h6" gutterBottom sx={{ color: '#c2185b' }}>
-                        {profile.Name}
-                    </Typography>
-
-                    <Box
-                        sx={{
-                            display: 'flex',
-                            mt: 1,
-                            color: 'text.secondary',
-                            justifyContent: 'center',
-                        }}
-                    >
-                        <EmailIcon fontSize="small" sx={{ mr: 0.5 }} />
-                        <Typography variant="body2" noWrap>
-                            {profile.Email || 'Not specified'}
-                        </Typography>
-                    </Box>
-                </CardContent>
-            </ProfileCard>
-        </Grid>
-    )}
-</Grid>
+        <Button
+            color="primary"
+            component="a"
+            href={selectedProfile.Email ? `mailto:${selectedProfile.Email}` : undefined}
+            disabled={!selectedProfile.Email}
+            variant="outlined"
+            startIcon={<EmailIcon />}
+            sx={{ width: '100%', minHeight: 48, borderRadius: 2, justifyContent: 'center' }}
+        >
+            Email
+        </Button>
+    </Box>
+) : (
+    <Button
+        onClick={() => navigate('/profile')}
+        variant="contained"
+        fullWidth
+        sx={{ minHeight: 48, borderRadius: 2 }}
+    >
+        Get Premium Subscription
+    </Button>
+)}

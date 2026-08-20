@@ -825,7 +825,6 @@ export default function Intrest() {
                                 {filteredProfiles.map((profile) => (
                                     <Grid size={{ xs: 2, sm: 2, md: 3 }} key={profile.RegisterID}>
 
-
                                         {profile.Intrest ==="No" &&(
                                             <IntrestCard>
                                                 <CardMedia

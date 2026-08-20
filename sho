@@ -5,7 +5,6 @@ import {
     Grid,
     Paper,
     Typography,
-    Divider,
     Card,
     CardContent,
     CardMedia,
@@ -17,19 +16,15 @@ import {
     DialogContent,
     DialogActions,
     Skeleton,
+    IconButton,
+    TextField,
+    Alert,
 } from "@mui/material";
 import { styled } from "@mui/material/styles";
-import PersonIcon from '@mui/icons-material/Person';
+import DeleteIcon from '@mui/icons-material/Delete';
 import LocationOnIcon from '@mui/icons-material/LocationOn';
 import SchoolIcon from '@mui/icons-material/School';
 import EmailIcon from '@mui/icons-material/Email';
-import AccessibleIcon from '@mui/icons-material/Accessible';
-import AccessibilityIcon from '@mui/icons-material/Accessibility';
-import FavoriteIcon from '@mui/icons-material/Favorite';
-import HeightIcon from '@mui/icons-material/Height';
-import WhatsAppIcon from '@mui/icons-material/WhatsApp';
-import InfoIcon from '@mui/icons-material/Info';
-import CalendarMonthIcon from '@mui/icons-material/CalendarMonth';
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 
@@ -47,15 +42,17 @@ const StyledPaper = styled(Paper)(({ theme }) => ({
     },
 }));
 
-
 const IntrestCard = styled(Card)(() => ({
     height: '100%',
     transition: 'transform 0.3s, box-shadow 0.3s',
     cursor: 'pointer',
     position: 'relative',
     overflow: 'visible',
+    '&:hover': {
+        transform: 'translateY(-4px)',
+        boxShadow: '0 12px 24px rgba(0,0,0,0.15)',
+    },
 }));
-
 
 export default function ShowIntrest() {
     const navigate = useNavigate();
@@ -64,13 +61,14 @@ export default function ShowIntrest() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(false);
     const [selectedProfile, setSelectedProfile] = useState(null);
+    const [detailOpen, setDetailOpen] = useState(false);
 
     const [intrested, setIntrested] = useState("");
     const currentUserEmail = localStorage.getItem('email');
 
     useEffect(() => {
         if (currentUserEmail) {
-            fetchInterestedProfiles([]);
+            fetchInterestedProfiles();
         } else {
             setProfiles([]);
             setFilteredProfiles([]);
@@ -86,20 +84,15 @@ export default function ShowIntrest() {
             const res = await axios.get(
                 `${API_URL}/user/intrest/${encodeURIComponent(currentUserEmail)}`
             );
-            console.log("Fetched interests:", res.data);
-            const interests = Array.isArray(res.data)
-                ? res.data
-                : [];
+            const interests = Array.isArray(res.data) ? res.data : [];
 
             setProfiles(interests);
             setFilteredProfiles(interests);
-
         } catch (err) {
             console.error(
                 "Error fetching interested profiles:",
                 err.response?.data || err.message
             );
-
             setProfiles([]);
             setFilteredProfiles([]);
             setError(true);
@@ -121,9 +114,8 @@ export default function ShowIntrest() {
                     profileId: profile.RegisterID,
                 }
             );
-            console.log("Interest updated:", res.data);
             setIntrested("");
-
+            await fetchInterestedProfiles();
         } catch (err) {
             console.error(
                 "Error updating interest:",
@@ -136,9 +128,8 @@ export default function ShowIntrest() {
 
     const deleteintrest = async (profile) => {
         setLoading(true);
-
         try {
-            const res = await axios.delete(
+            await axios.delete(
                 `${API_URL}/user/intrest/${encodeURIComponent(currentUserEmail)}`,
                 {
                     data: {
@@ -147,7 +138,9 @@ export default function ShowIntrest() {
                     },
                 }
             );
-            console.log("Interest deleted:", res.data);
+            // remove locally instead of refetching everything
+            setProfiles((prev) => prev.filter((p) => p.RegisterID !== profile.RegisterID));
+            setFilteredProfiles((prev) => prev.filter((p) => p.RegisterID !== profile.RegisterID));
         } catch (err) {
             console.error(
                 "Error deleting interest:",
@@ -158,14 +151,17 @@ export default function ShowIntrest() {
         }
     };
 
-
     //----------------------------------------------------------------------------------------------------------------------------
 
     const handleProfileClick = (profile) => {
         setSelectedProfile(profile);
-        setDetailOpen(true)
+        setDetailOpen(true);
     };
 
+    const handleCloseDetail = () => {
+        setDetailOpen(false);
+        setSelectedProfile(null);
+    };
 
     const getImageUrl = (imagePath) => {
         if (!imagePath) return null;
@@ -174,50 +170,59 @@ export default function ShowIntrest() {
         return `${API_URL}/${cleanPath}`;
     };
 
-
     return (
         <>
-
             <CssBaseline />
             <Box sx={{
                 minHeight: '100vh',
-                background: 'linear-gradient(135deg, rgb(163, 65, 65) 0%,rgb(232, 53, 37) 100%)',
+                background: 'linear-gradient(135deg, rgb(163, 65, 65) 0%, rgb(232, 53, 37) 100%)',
                 py: { xs: 2, sm: 3, md: 4 },
                 px: { xs: 1, sm: 2, md: 0 },
             }}>
                 <Container maxWidth="xl">
                     <StyledPaper elevation={3}>
-                        <List dense sx={{ width: '100%', maxWidth: 360, bgcolor: 'background.paper' }}>
-                            {[0, 1, 2, 3].map((value) => {
-                                const labelId = `checkbox-list-secondary-label-${value}`;
-                                return (
-                                    <ListItem
-                                        key={value}
-                                        secondaryAction={
-                                            <IconButton edge="end" aria-label="delete">
-                                                <DeleteIcon />
-                                            </IconButton>
-                                        }
-                                        disablePadding
-                                    >
-                                        <ListItemButton>
-                                            <ListItemAvatar>
-                                                <Avatar
-                                                    alt={`Avatar n°${value + 1}`}
-                                                    src={`/static/images/avatar/${value + 1}.jpg`}
+                        <Typography variant="h5" fontWeight={700} gutterBottom>
+                            My Interests
+                        </Typography>
+
+                        {!currentUserEmail && (
+                            <Alert severity="warning">Please log in to view your interests.</Alert>
+                        )}
+
+                        {error && (
+                            <Alert severity="error" sx={{ mb: 2 }}>
+                                Couldn't load your interests. Please try again.
+                            </Alert>
+                        )}
+
+                        {loading ? (
+                            <Grid container spacing={2}>
+                                {[0, 1, 2].map((i) => (
+                                    <Grid item xs={12} sm={6} md={4} key={i}>
+                                        <Skeleton variant="rectangular" height={180} sx={{ borderRadius: 2 }} />
+                                        <Skeleton variant="text" width="60%" />
+                                        <Skeleton variant="text" width="40%" />
+                                    </Grid>
+                                ))}
+                            </Grid>
+                        ) : filteredProfiles.length === 0 ? (
+                            !error && currentUserEmail && (
+                                <Typography color="text.secondary">
+                                    You haven't marked interest in any profiles yet.
+                                </Typography>
+                            )
+                        ) : (
+                            <Grid container spacing={2}>
+                                {filteredProfiles.map((profile) => (
+                                    <Grid item xs={12} sm={6} md={4} key={profile.RegisterID}>
+                                        <IntrestCard elevation={2} onClick={() => handleProfileClick(profile)}>
+                                            {profile.ProfileImage && (
+                                                <CardMedia
+                                                    component="img"
+                                                    height="180"
+                                                    image={getImageUrl(profile.ProfileImage)}
+                                                    alt={profile.Name}
                                                 />
-                                            </ListItemAvatar>
-                                            <ListItemText id={labelId} primary={`Line item ${value + 1}`} />
-                                        </ListItemButton>
-                                    </ListItem>
-                                );
-                            })}
-                        </List>
-                    </StyledPaper>
-                </Container>
-            </Box >
-
-        </>
-
-    );
-}
+                                            )}
+                                            <CardContent>
+                                                <Box display="flex" alignItems="center" gap={1} mb={1}>

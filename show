@@ -1,0 +1,289 @@
+import {
+    Box,
+    Container,
+    CssBaseline,
+    Grid,
+    Paper,
+    Typography,
+    Card,
+    CardContent,
+    CardMedia,
+    Button,
+    Alert,
+} from "@mui/material";
+import { styled } from "@mui/material/styles";
+import DeleteIcon from "@mui/icons-material/Delete";
+import AddIcon from "@mui/icons-material/Add";
+import { useState, useEffect } from "react";
+import axios from "axios";
+
+const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
+
+const StyledPaper = styled(Paper)(({ theme }) => ({
+    padding: theme.spacing(3),
+    borderRadius: 16,
+    boxShadow: "0 8px 32px rgba(0,0,0,0.1)",
+
+    [theme.breakpoints.down("sm")]: {
+        padding: theme.spacing(2),
+        borderRadius: 12,
+    },
+}));
+
+const InterestCard = styled(Card)(() => ({
+    height: "100%",
+    transition: "transform 0.3s, box-shadow 0.3s",
+    cursor: "pointer",
+    position: "relative",
+    overflow: "hidden",
+}));
+
+export default function ShowInterest() {
+    const [profiles, setProfiles] = useState([]);
+    const [actionLoading, setActionLoading] = useState(null);
+
+    const currentUserEmail = localStorage.getItem("email");
+
+    useEffect(() => {
+        if (currentUserEmail) {
+            fetchInterestedProfiles();
+        } else {
+            setProfiles([]);
+
+        }
+    }, [currentUserEmail]);
+
+    const fetchInterestedProfiles = async () => {
+        try {
+            const response = await axios.get(
+                `${API_URL}/status/No/${encodeURIComponent(
+                    currentUserEmail
+                )}`
+            );
+
+            const interests = Array.isArray(response.data)
+                ? response.data
+                : [];
+
+            // const hasInterest = interests.some(
+            //     (profile) =>
+            //         String(profile.Intrest || "").toLowerCase() === "yes"
+            // );
+
+            // if (hasInterest) {
+            //     setProfiles([]);
+            //     return;
+            // }
+
+            setProfiles(interests);
+        } catch (err) {
+            console.error(
+                "Error fetching interested profiles:",
+                err.response?.data || err.message
+            );
+
+            setProfiles([]);
+        }
+    };
+
+    const addInterest = async (profile) => {
+        setActionLoading(profile.RegisterID);
+
+        try {
+            const response = await axios.put(
+                `${API_URL}/user/intrest/${encodeURIComponent(currentUserEmail)}`,
+                {
+                    intrest: "Yes",
+                    requesterEmail: currentUserEmail,
+                    profileId: profile.RegisterID,
+                }
+            );
+            console.log(response.data);
+            setProfiles((prev) =>
+                prev.filter(
+                    (item) => item.RegisterID !== profile.RegisterID
+                )
+            );
+        } catch (err) {
+            console.error(
+                "Error updating interest:",
+                err.response?.data || err.message
+            );
+        } finally {
+            setActionLoading(null);
+        }
+    };
+
+    const deleteInterest = async (profile) => {
+        setActionLoading(profile.RegisterID);
+        try {
+            await axios.delete(
+                `${API_URL}/user/intrest/${encodeURIComponent(currentUserEmail)}`,
+                {
+                    data: {
+                        requesterEmail: currentUserEmail,
+                        profileId: profile.RegisterID,
+                    },
+                }
+            );
+            setProfiles((prev) =>
+                prev.filter(
+                    (item) => item.RegisterID !== profile.RegisterID
+                )
+            );
+        } catch (err) {
+            console.error(
+                "Error deleting interest:",
+                err.response?.data || err.message
+            );
+        } finally {
+            setActionLoading(null);
+        }
+    };
+
+    const getImageUrl = (imagePath) => {
+        if (!imagePath) return null;
+        if (imagePath.startsWith('http')) return imagePath;
+        const cleanPath = imagePath.replace(/^\/+/, '');
+        return `${API_URL}/${cleanPath}`;
+    };
+
+    return (
+        <>
+            <CssBaseline />
+
+            <Box
+                sx={{
+                    minHeight: "100vh",
+                    background:
+                        "linear-gradient(135deg, rgb(163, 65, 65) 0%, rgb(232, 53, 37) 100%)",
+                    py: { xs: 2, sm: 3, md: 4 },
+                    px: { xs: 1, sm: 2, md: 0 },
+                }}
+            >
+                <Container maxWidth="xl">
+                    <StyledPaper elevation={3}>
+                        <Typography
+                            variant="h5"
+                            fontWeight={700}
+                            gutterBottom
+                        >
+                            Interest Requests
+                        </Typography>
+
+                        {!currentUserEmail && (
+                            <Alert severity="warning">
+                                Please log in to view your interests.
+                            </Alert>
+                        )}
+
+                        {profiles.length === 0 ? (
+                            currentUserEmail && (
+                                <Typography>
+                                    You haven't marked interest in any profiles
+                                    yet.
+                                </Typography>
+                            )
+                        ) : (
+                            <Grid container spacing={2}>
+                                {profiles.map((profile) => {
+                                    const isProcessing =
+                                        actionLoading === profile.RegisterID;
+
+                                    return (
+                                        <Grid
+                                            item
+                                            xs={12}
+                                            sm={6}
+                                            md={4}
+                                            lg={3}
+                                            key={profile.RegisterID}
+                                        >
+
+                                            <InterestCard elevation={2}>
+                                                <CardMedia
+                                                    component="img"
+                                                    src={getImageUrl(profile.Image)}
+                                                    alt={profile.Name || "Profile"}
+                                                    sx={{
+                                                        width: "100%",
+                                                        height: {
+                                                            xs: 220,
+                                                            sm: 200,
+                                                            md: 190,
+                                                        },
+                                                        objectFit: "cover",
+                                                    }}
+                                                    onError={(event) => {
+                                                        event.currentTarget.style.display = "none";
+                                                    }}
+                                                />
+
+                                                <CardContent
+                                                    sx={{
+                                                        display: "flex",
+                                                        flexDirection: "column",
+                                                        p: 2,
+                                                    }}
+                                                >
+                                                    <Typography
+                                                        variant="subtitle1"
+                                                        fontWeight={600}
+                                                        sx={{
+                                                            textAlign: "center",
+                                                            mb: 2,
+                                                        }}
+                                                    >
+                                                        {profile.Name || "Unknown"}
+                                                    </Typography>
+
+                                                    <Box
+                                                        sx={{
+                                                            display: "flex",
+                                                            justifyContent: "center",
+                                                            alignItems: "center",
+                                                            gap: 1,
+                                                            pt: 1,
+                                                            borderTop: "1px solid",
+                                                            borderColor: "divider",
+                                                        }}
+                                                    >
+                                                        <Button
+                                                            variant="contained"
+                                                            color="success"
+                                                            size="small"
+                                                            disabled={isProcessing}
+                                                            onClick={() => addInterest(profile)}
+                                                            startIcon={<AddIcon />}
+                                                        >
+                                                            {isProcessing
+                                                                ? "Processing..."
+                                                                : "Accept"}
+                                                        </Button>
+
+                                                        <Button
+                                                            variant="outlined"
+                                                            color="error"
+                                                            size="small"
+                                                            disabled={isProcessing}
+                                                            onClick={() => deleteInterest(profile)}
+                                                            startIcon={<DeleteIcon />}
+                                                        >
+                                                            Reject
+                                                        </Button>
+                                                    </Box>
+                                                </CardContent>
+                                            </InterestCard>
+
+                                        </Grid>
+                                    );
+                                })}
+
+                            </Grid>
+                        )}
+                    </StyledPaper>
+                </Container>
+            </Box>
+        </>
+    );
+}

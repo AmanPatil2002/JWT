@@ -1,0 +1,223 @@
+import {
+    Box,
+    Container,
+    CssBaseline,
+    Grid,
+    Paper,
+    Typography,
+    Divider,
+    Card,
+    CardContent,
+    CardMedia,
+    Avatar,
+    Chip,
+    Button,
+    Dialog,
+    DialogTitle,
+    DialogContent,
+    DialogActions,
+    Skeleton,
+} from "@mui/material";
+import { styled } from "@mui/material/styles";
+import PersonIcon from '@mui/icons-material/Person';
+import LocationOnIcon from '@mui/icons-material/LocationOn';
+import SchoolIcon from '@mui/icons-material/School';
+import EmailIcon from '@mui/icons-material/Email';
+import AccessibleIcon from '@mui/icons-material/Accessible';
+import AccessibilityIcon from '@mui/icons-material/Accessibility';
+import FavoriteIcon from '@mui/icons-material/Favorite';
+import HeightIcon from '@mui/icons-material/Height';
+import WhatsAppIcon from '@mui/icons-material/WhatsApp';
+import InfoIcon from '@mui/icons-material/Info';
+import CalendarMonthIcon from '@mui/icons-material/CalendarMonth';
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+
+import axios from "axios";
+
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+
+const StyledPaper = styled(Paper)(({ theme }) => ({
+    padding: theme.spacing(3),
+    borderRadius: 16,
+    boxShadow: '0 8px 32px rgba(0,0,0,0.1)',
+    [theme.breakpoints.down('sm')]: {
+        padding: theme.spacing(2),
+        borderRadius: 12,
+    },
+}));
+
+
+const IntrestCard = styled(Card)(() => ({
+    height: '100%',
+    transition: 'transform 0.3s, box-shadow 0.3s',
+    cursor: 'pointer',
+    position: 'relative',
+    overflow: 'visible',
+}));
+
+
+export default function ShowIntrest() {
+    const navigate = useNavigate();
+    const [profiles, setProfiles] = useState([]);
+    const [filteredProfiles, setFilteredProfiles] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(false);
+    const [selectedProfile, setSelectedProfile] = useState(null);
+
+    const [intrested, setIntrested] = useState("");
+    const currentUserEmail = localStorage.getItem('email');
+
+    useEffect(() => {
+        if (currentUserEmail) {
+            fetchInterestedProfiles([]);
+        } else {
+            setProfiles([]);
+            setFilteredProfiles([]);
+            setLoading(false);
+        }
+    }, [currentUserEmail]);
+
+    const fetchInterestedProfiles = async () => {
+        setLoading(true);
+        setError(false);
+
+        try {
+            const res = await axios.get(
+                `${API_URL}/user/intrest/${encodeURIComponent(currentUserEmail)}`
+            );
+            console.log("Fetched interests:", res.data);
+            const interests = Array.isArray(res.data)
+                ? res.data
+                : [];
+
+            setProfiles(interests);
+            setFilteredProfiles(interests);
+
+        } catch (err) {
+            console.error(
+                "Error fetching interested profiles:",
+                err.response?.data || err.message
+            );
+
+            setProfiles([]);
+            setFilteredProfiles([]);
+            setError(true);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    //----------------------------------------------------------------------------------------------------------------------------------
+
+    const Addintrest = async (profile) => {
+        setLoading(true);
+        try {
+            const res = await axios.put(
+                `${API_URL}/user/intrest/${encodeURIComponent(currentUserEmail)}`,
+                {
+                    intrest: intrested,
+                    requesterEmail: currentUserEmail,
+                    profileId: profile.RegisterID,
+                }
+            );
+            console.log("Interest updated:", res.data);
+            setIntrested("");
+
+        } catch (err) {
+            console.error(
+                "Error updating interest:",
+                err.response?.data || err.message
+            );
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const deleteintrest = async (profile) => {
+        setLoading(true);
+
+        try {
+            const res = await axios.delete(
+                `${API_URL}/user/intrest/${encodeURIComponent(currentUserEmail)}`,
+                {
+                    data: {
+                        requesterEmail: currentUserEmail,
+                        profileId: profile.RegisterID,
+                    },
+                }
+            );
+            console.log("Interest deleted:", res.data);
+        } catch (err) {
+            console.error(
+                "Error deleting interest:",
+                err.response?.data || err.message
+            );
+        } finally {
+            setLoading(false);
+        }
+    };
+
+
+    //----------------------------------------------------------------------------------------------------------------------------
+
+    const handleProfileClick = (profile) => {
+        setSelectedProfile(profile);
+        setDetailOpen(true)
+    };
+
+
+    const getImageUrl = (imagePath) => {
+        if (!imagePath) return null;
+        if (imagePath.startsWith('http')) return imagePath;
+        const cleanPath = imagePath.replace(/^\/+/, '');
+        return `${API_URL}/${cleanPath}`;
+    };
+
+
+    return (
+        <>
+
+            <CssBaseline />
+            <Box sx={{
+                minHeight: '100vh',
+                background: 'linear-gradient(135deg, rgb(163, 65, 65) 0%,rgb(232, 53, 37) 100%)',
+                py: { xs: 2, sm: 3, md: 4 },
+                px: { xs: 1, sm: 2, md: 0 },
+            }}>
+                <Container maxWidth="xl">
+                    <StyledPaper elevation={3}>
+                        <List dense sx={{ width: '100%', maxWidth: 360, bgcolor: 'background.paper' }}>
+                            {[0, 1, 2, 3].map((value) => {
+                                const labelId = `checkbox-list-secondary-label-${value}`;
+                                return (
+                                    <ListItem
+                                        key={value}
+                                        secondaryAction={
+                                            <IconButton edge="end" aria-label="delete">
+                                                <DeleteIcon />
+                                            </IconButton>
+                                        }
+                                        disablePadding
+                                    >
+                                        <ListItemButton>
+                                            <ListItemAvatar>
+                                                <Avatar
+                                                    alt={`Avatar n°${value + 1}`}
+                                                    src={`/static/images/avatar/${value + 1}.jpg`}
+                                                />
+                                            </ListItemAvatar>
+                                            <ListItemText id={labelId} primary={`Line item ${value + 1}`} />
+                                        </ListItemButton>
+                                    </ListItem>
+                                );
+                            })}
+                        </List>
+                    </StyledPaper>
+                </Container>
+            </Box >
+
+        </>
+
+    );
+}

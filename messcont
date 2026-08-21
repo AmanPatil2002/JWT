@@ -1,0 +1,38 @@
+const db = require("../config/database");
+
+
+const getMessage = (req, res) => {
+    const { email } = req.params;
+
+    if (!email) {
+        return res.status(400).json({
+            error: "Email is required"
+        });
+    }
+    const sql = `
+        SELECT
+            i.MessageID,
+            i.SenderEmail,
+            i.ReceiverId,
+            p.*
+        FROM messages i
+        INNER JOIN interested p
+            ON p.ProfileID = i.ReceiverId
+        WHERE i.SenderEmail = ?
+    `;
+
+    db.query(sql, [email], (err, results) => {
+        if (err) {
+            console.error("Error fetching interested profiles:", err);
+            return res.status(500).json({
+                error: "Database error",
+                details: err.message
+            });
+        }
+        res.status(200).json(results);
+    });
+};
+
+module.exports = {
+    getMessage,
+};

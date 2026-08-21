@@ -1,36 +1,26 @@
-const [currentUserMember, setCurrentUserMember] = useState(null);
-const [loading, setLoading] = useState(true);
+-- Messages table: full chat/inbox with conversation history
+-- A "conversation" is derived from the (sender, receiver) pair — no separate
+-- conversations table needed since the app already keys users by Email.
 
-useEffect(() => {
-  const fetchCurrentUserStatus = async () => {
-    try {
-      setLoading(true);
-      const profiles = await getProfile(); // however this is called in your app
+CREATE TABLE IF NOT EXISTS messages (
+    MessageID     INT AUTO_INCREMENT PRIMARY KEY,
+    SenderEmail   VARCHAR(255) NOT NULL,
+    ReceiverEmail VARCHAR(255) NOT NULL,
+    MessageText   TEXT NOT NULL,
+    IsRead        TINYINT(1) NOT NULL DEFAULT 0,
+    CreatedAt     TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
-      // profiles could be an array, or getProfile might return a single object -
-      // adjust this line to match your actual data shape
-      const matchedProfile = Array.isArray(profiles)
-        ? profiles.find(
-            (p) => p.Email?.toLowerCase() === currentUserEmail?.toLowerCase()
-          )
-        : profiles;
+    CONSTRAINT fk_messages_sender
+        FOREIGN KEY (SenderEmail) REFERENCES register(Email)
+        ON DELETE CASCADE,
+    CONSTRAINT fk_messages_receiver
+        FOREIGN KEY (ReceiverEmail) REFERENCES register(Email)
+        ON DELETE CASCADE,
 
-      if (matchedProfile) {
-        setCurrentUserMember(
-          matchedProfile.Membership === 'Premium' ? 'Premium' : 'Free'
-        );
-      } else {
-        setCurrentUserMember('Free');
-      }
-    } catch (err) {
-      console.error('Failed to fetch user profile:', err);
-      setCurrentUserMember('Free'); // safe fallback
-    } finally {
-      setLoading(false);
-    }
-  };
+    INDEX idx_conversation (SenderEmail, ReceiverEmail, CreatedAt),
+    INDEX idx_inbox (ReceiverEmail, IsRead)
+);
 
-  if (currentUserEmail) {
-    fetchCurrentUserStatus();
-  }
-}, [currentUserEmail]);
+-- NOTE: change `register(Email)` above to match your actual users table
+-- name/PK if it differs. If Email isn't a unique/primary key on that table,
+-- drop the two FOREIGN KEY constraints (indexes alone are fine).

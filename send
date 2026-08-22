@@ -87,6 +87,8 @@ const ProfileDetailDialog = ({
     handleClickOpen,
     handleClose,
 
+    message,
+    currentUserEmail,
     messageText,
     setMessageText,
     handleSendMessage,
@@ -94,6 +96,20 @@ const ProfileDetailDialog = ({
 
     getImageUrl,
 }) => {
+    // Only show the thread between the current user and the selected profile.
+    const threadMessages = selectedProfile
+        ? message.filter(
+              (m) =>
+                  (m.SenderEmail?.toLowerCase() ===
+                      currentUserEmail?.toLowerCase() &&
+                      String(m.ReceiverId) ===
+                          String(selectedProfile.RegisterID)) ||
+                  (m.SenderEmail?.toLowerCase() ===
+                      selectedProfile.Email?.toLowerCase() &&
+                      String(m.ReceiverId) === String(currentUserEmail))
+          )
+        : [];
+
     return (
         <Dialog
             open={detailOpen}
@@ -872,73 +888,57 @@ const ProfileDetailDialog = ({
                                                             },
                                                         }}
                                                     >
-                                                        {message.map((send) => (
-
-
-                                                            <Box key={send.MessageID}
+                                                        {threadMessages.length === 0 ? (
+                                                            <Typography
+                                                                variant="body2"
+                                                                color="text.secondary"
+                                                                textAlign="center"
+                                                                sx={{ py: 2 }}
+                                                            >
+                                                                No messages yet. Say hello!
+                                                            </Typography>
+                                                        ) : (
+                                                            <Box
                                                                 sx={{
                                                                     display: "flex",
-                                                                    flexDirection:
-                                                                        "column",
+                                                                    flexDirection: "column",
                                                                     gap: 1.5,
                                                                     width: "100%",
                                                                 }}
                                                             >
-                                                                <Box
-                                                                    sx={{
-                                                                        alignSelf:
-                                                                            "flex-start",
-                                                                        maxWidth:
-                                                                            "60%",
-                                                                    }}
-                                                                >
-                                                                    <Chip
-                                                                        label="hello"
-                                                                        sx={{
-                                                                            height: "auto",
+                                                                {threadMessages.map((send) => {
+                                                                    const isMine =
+                                                                        send.SenderEmail?.toLowerCase() ===
+                                                                        currentUserEmail?.toLowerCase();
 
-                                                                            "& .MuiChip-label":
-                                                                            {
-                                                                                whiteSpace:
-                                                                                    "normal",
+                                                                    return (
+                                                                        <Box
+                                                                            key={send.MessageID}
+                                                                            sx={{
+                                                                                alignSelf: isMine
+                                                                                    ? "flex-end"
+                                                                                    : "flex-start",
+                                                                                maxWidth: "60%",
+                                                                            }}
+                                                                        >
+                                                                            <Chip
+                                                                                label={send.MessageText}
+                                                                                color={isMine ? "primary" : "default"}
+                                                                                sx={{
+                                                                                    height: "auto",
 
-                                                                                overflowWrap:
-                                                                                    "anywhere",
-
-                                                                                py: 1,
-                                                                            },
-                                                                        }}
-                                                                    />
-                                                                </Box>
-
-                                                                <Box
-                                                                    sx={{
-                                                                        alignSelf:
-                                                                            "flex-end",
-                                                                        maxWidth:
-                                                                            "60%",
-                                                                    }}
-                                                                >
-                                                                    <Chip
-                                                                        label="hello"
-                                                                        sx={{
-                                                                            height: "auto",
-
-                                                                            "& .MuiChip-label":
-                                                                            {
-                                                                                whiteSpace:
-                                                                                    "normal",
-
-                                                                                overflowWrap:
-                                                                                    "anywhere",
-
-                                                                                py: 1,
-                                                                            },
-                                                                        }}
-                                                                    />
-                                                                </Box>
+                                                                                    "& .MuiChip-label": {
+                                                                                        whiteSpace: "normal",
+                                                                                        overflowWrap: "anywhere",
+                                                                                        py: 1,
+                                                                                    },
+                                                                                }}
+                                                                            />
+                                                                        </Box>
+                                                                    );
+                                                                })}
                                                             </Box>
-                                                        ))}
+                                                        )}
                                                     </CardContent>
                                                 </DialogContent>
 
@@ -1671,6 +1671,8 @@ export default function Intrest() {
                 open={open}
                 handleClickOpen={handleClickOpen}
                 handleClose={handleClose}
+                message={message}
+                currentUserEmail={currentUserEmail}
                 messageText={messageText}
                 setMessageText={setMessageText}
                 handleSendMessage={handleSendMessage}

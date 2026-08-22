@@ -1,13 +1,9 @@
 const db = require("../config/database");
 
-
 const getMessage = (req, res) => {
     const { email } = req.params;
-
     if (!email) {
-        return res.status(400).json({
-            error: "Email is required"
-        });
+        return res.status(400).json({ error: "Email is required" });
     }
     const sql = `
         SELECT
@@ -20,14 +16,10 @@ const getMessage = (req, res) => {
             ON p.ProfileID = i.ReceiverId
         WHERE i.SenderEmail = ?
     `;
-
     db.query(sql, [email], (err, results) => {
         if (err) {
             console.error("Error fetching interested profiles:", err);
-            return res.status(500).json({
-                error: "Database error",
-                details: err.message
-            });
+            return res.status(500).json({ error: "Database error", details: err.message });
         }
         res.status(200).json(results);
     });
@@ -36,44 +28,29 @@ const getMessage = (req, res) => {
 const SendMessage = (req, res) => {
     const { email } = req.params;
     const { receiverId, message } = req.body;
-
     if (!email || !receiverId || !message) {
         return res.status(400).json({
             error: "Email, receiverId and message are required"
         });
     }
-    const sql = `INSERT messages SET MessageText = ? WHERE RequesterEmail = ? AND ProfileID = ? `;
 
-    db.query(
-        sql,
-        [intrest, requesterEmail, profileId],
-        (err, result) => {
-            if (err) {
-                console.error("Error updating interest:", err);
-                return res.status(500).json({
-                    error: "Database error",
-                    details: err.message
-                });
-            }
+    const sql = `INSERT INTO messages (SenderEmail, ReceiverId, MessageText) VALUES (?, ?, ?)`;
 
-            if (result.affectedRows === 0) {
-                return res.status(404).json({
-                    error: "Interested record not found"
-                });
-            }
-
-            res.status(200).json({
-                message: "Interest updated successfully",
-                requesterEmail,
-                profileId,
-                intrest
-            });
+    db.query(sql, [email, receiverId, message], (err, result) => {
+        if (err) {
+            console.error("Error sending message:", err);
+            return res.status(500).json({ error: "Database error", details: err.message });
         }
-    );
+        res.status(201).json({
+            message: "Message sent successfully",
+            senderEmail: email,
+            receiverId,
+            text: message
+        });
+    });
 };
-
-
 
 module.exports = {
     getMessage,
+    SendMessage
 };

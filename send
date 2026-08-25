@@ -77,39 +77,21 @@ const ProfileCard = styled(Card)(() => ({
     },
 }));
 
-
 const ProfileDetailDialog = ({
     detailOpen,
     setDetailOpen,
     selectedProfile,
-
     open,
     handleClickOpen,
     handleClose,
-
     message,
     currentUserEmail,
     messageText,
     setMessageText,
     handleSendMessage,
     sending,
-
     getImageUrl,
 }) => {
-    // Only show the thread between the current user and the selected profile.
-    const threadMessages = selectedProfile
-        ? message.filter(
-              (m) =>
-                  (m.SenderEmail?.toLowerCase() ===
-                      currentUserEmail?.toLowerCase() &&
-                      String(m.ReceiverId) ===
-                          String(selectedProfile.RegisterID)) ||
-                  (m.SenderEmail?.toLowerCase() ===
-                      selectedProfile.Email?.toLowerCase() &&
-                      String(m.ReceiverId) === String(currentUserEmail))
-          )
-        : [];
-
     return (
         <Dialog
             open={detailOpen}
@@ -134,8 +116,6 @@ const ProfileDetailDialog = ({
         >
             {selectedProfile && (
                 <>
-
-
                     <DialogTitle
                         sx={{
                             display: "flex",
@@ -868,65 +848,41 @@ const ProfileDetailDialog = ({
                                                         maxHeight: 400,
                                                         overflowY: "auto",
                                                         overflowX: "hidden",
-
                                                         "&::-webkit-scrollbar":
                                                         {
                                                             display:
                                                                 "none",
                                                         },
-
                                                         msOverflowStyle: "none",
                                                         scrollbarWidth: "none",
                                                     }}
                                                 >
                                                     <CardContent
                                                         sx={{
-                                                            p: {
-                                                                xs: 0,
-                                                                sm: 1,
-                                                                md: 2,
-                                                            },
+                                                            p: { xs: 0.5, sm: 1, md: 2 },
                                                         }}
                                                     >
-                                                        {threadMessages.length === 0 ? (
-                                                            <Typography
-                                                                variant="body2"
-                                                                color="text.secondary"
-                                                                textAlign="center"
-                                                                sx={{ py: 2 }}
-                                                            >
-                                                                No messages yet. Say hello!
-                                                            </Typography>
-                                                        ) : (
-                                                            <Box
-                                                                sx={{
-                                                                    display: "flex",
-                                                                    flexDirection: "column",
-                                                                    gap: 1.5,
-                                                                    width: "100%",
-                                                                }}
-                                                            >
-                                                                {threadMessages.map((send) => {
-                                                                    const isMine =
-                                                                        send.SenderEmail?.toLowerCase() ===
-                                                                        currentUserEmail?.toLowerCase();
-
-                                                                    return (
+                                                        <Box>
+                                                            {message.map((send) => (
+                                                                <div key={send.MessageID}>
+                                                                    
+                                                                    {send.SenderEmail === currentUserEmail && send.ReceiverId === selectedProfile.RegisterID ? (
                                                                         <Box
-                                                                            key={send.MessageID}
                                                                             sx={{
-                                                                                alignSelf: isMine
-                                                                                    ? "flex-end"
-                                                                                    : "flex-start",
-                                                                                maxWidth: "60%",
+                                                                                alignSelf: 'flex-end',
+                                                                                marginBottom: 1,
+                                                                                maxWidth: {
+                                                                                    xs: "85%",
+                                                                                    sm: "70%",
+                                                                                },
                                                                             }}
                                                                         >
+                                                                            {/* sended message */}
                                                                             <Chip
                                                                                 label={send.MessageText}
-                                                                                color={isMine ? "primary" : "default"}
                                                                                 sx={{
                                                                                     height: "auto",
-
+                                                                                    bgcolor: "#3cde47",
                                                                                     "& .MuiChip-label": {
                                                                                         whiteSpace: "normal",
                                                                                         overflowWrap: "anywhere",
@@ -935,13 +891,38 @@ const ProfileDetailDialog = ({
                                                                                 }}
                                                                             />
                                                                         </Box>
-                                                                    );
-                                                                })}
-                                                            </Box>
-                                                        )}
+                                                                    ) : send.SenderEmail === selectedProfile.Email ? (
+                                                                        
+                                                                        <Box
+                                                                            sx={{
+                                                                                alignSelf: 'flex-end',
+                                                                                marginBottom: 1,
+                                                                                maxWidth: {
+                                                                                    xs: "85%",
+                                                                                    sm: "70%",
+                                                                                },
+                                                                            }}
+                                                                        >
+                                                                            {/* received message */}
+                                                                            <Chip
+                                                                                label={send.MessageText}
+                                                                                sx={{
+                                                                                    height: "auto",
+                                                                                    bgcolor: "#dde2de",
+                                                                                    "& .MuiChip-label": {
+                                                                                        whiteSpace: "normal",
+                                                                                        overflowWrap: "anywhere",
+                                                                                        py: 1,
+                                                                                    },
+                                                                                }}
+                                                                            />
+                                                                        </Box>
+                                                                    ) : (null)}
+                                                                </div>
+                                                            ))}
+                                                        </Box>
                                                     </CardContent>
                                                 </DialogContent>
-
                                                 <DialogActions
                                                     sx={{
                                                         p: {
@@ -1065,8 +1046,9 @@ const ProfileDetailDialog = ({
                         </Button>
                     </DialogActions>
                 </>
-            )}
-        </Dialog>
+            )
+            }
+        </Dialog >
     );
 };
 
@@ -1214,14 +1196,12 @@ export default function Intrest() {
     const fetchInterestedProfiles = async () => {
         setLoading(true);
         setError(false);
-
         try {
             const res = await axios.get(
                 `${API_URL}/user/status/Yes/${encodeURIComponent(
                     currentUserEmail
                 )}`
             );
-
             const interests = Array.isArray(res.data)
                 ? res.data
                 : [];
@@ -1248,29 +1228,15 @@ export default function Intrest() {
     };
 
     const fetchMessage = async () => {
-        if (!currentUserEmail) {
-            return;
-        }
-
         try {
-            const res = await axios.get(
-                `${API_URL}/send/message/${encodeURIComponent(
-                    currentUserEmail
-                )}`
-            );
-
-            setMessage(
-                Array.isArray(res.data)
-                    ? res.data
-                    : []
-            );
+            const res = await axios.get(`${API_URL}/send/message`);
+            setMessage(res.data);
         } catch (err) {
             console.error(
                 "Error fetching messages:",
                 err.response?.data || err.message
             );
 
-            setMessage([]);
         }
     };
 
@@ -1316,14 +1282,10 @@ export default function Intrest() {
         if (!imagePath) {
             return null;
         }
-
         if (imagePath.startsWith("http")) {
             return imagePath;
         }
-
-        const cleanPath =
-            imagePath.replace(/^\/+/, "");
-
+        const cleanPath = imagePath.replace(/^\/+/, "");
         return `${API_URL}/${cleanPath}`;
     };
 
@@ -1351,6 +1313,7 @@ export default function Intrest() {
                     },
                 }}
             >
+
                 <Container maxWidth="xl">
                     <StyledPaper elevation={3}>
 
@@ -1525,8 +1488,6 @@ export default function Intrest() {
                                 </Typography>
                             </Box>
                         ) : (
-
-
                             <Grid
                                 container
                                 spacing={{
@@ -1663,16 +1624,15 @@ export default function Intrest() {
                 </Container>
             </Box>
 
-
             <ProfileDetailDialog
                 detailOpen={detailOpen}
                 setDetailOpen={setDetailOpen}
                 selectedProfile={selectedProfile}
                 open={open}
-                handleClickOpen={handleClickOpen}
-                handleClose={handleClose}
                 message={message}
                 currentUserEmail={currentUserEmail}
+                handleClickOpen={handleClickOpen}
+                handleClose={handleClose}
                 messageText={messageText}
                 setMessageText={setMessageText}
                 handleSendMessage={handleSendMessage}

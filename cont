@@ -1,0 +1,237 @@
+const db = require("../config/database");
+
+
+
+const postIntrest = (req, res) => {
+    const { requesterEmail, profileId, intrest } = req.body;
+     if (!requesterEmail || !profileId || !intrest) {
+        return res.status(400).json({
+            error: "requesterEmail, profileId and intrest are required"
+        });
+    }
+    db.query("SELECT id FROM interested WHERE RequesterEmail = ?", [requesterEmail], (err, existing) => {
+        if (err) {
+            console.error("Error checking existing profile:", err);
+            return res.status(500).json({ error: "Database error", details: err.message });
+        }
+        if (existing.length > 0) {
+            return res.status(409).json({
+                error: "A profile with this email already exists",
+                existingid: existing[0].id
+            });
+        }
+        const sql = `INSERT INTO interested () VALUES ( ?, ?, ?)`;
+        const values = [];
+        db.query(sql, values, (err, result) => {
+            if (err) {
+                console.error("Database error:", err);
+                return res.status(500).json({
+                    error: "Failed to create profile",
+                    details: err.message
+                });
+            }
+            const token = jwt.sign({ id: result.insertId, email: email, name: name,},
+                SECRET_KEY,
+                { expiresIn: "1h" }
+            );
+            const imageUrl = image ? `http://localhost:${process.env.PORT || 5000}/${image}` : null;
+            res.status(201).json({
+                message: "Profile created successfully",
+                token,
+                profile: {
+                    RegisterID: result.insertId,
+                    Gender: gender, Name: name, Email: email, Age: age, DOB: dob, Contact: contact,
+                    Address: address, Language: language, Religion: religion, Education: education,
+                    Occupation: occupation, CompanyName: company, MonthlyIncome: income,
+                    Image: imageUrl, Status: status, Detail: detail, Physically: physical,
+                    Height: height, Member: member
+                }
+            });
+        });
+    });
+}
+
+
+
+const getInterested = (req, res) => {
+    const { email } = req.params;
+    if (!email) {
+        return res.status(400).json({
+            error: "Email is required"
+        });
+    }
+    const sql = `
+        SELECT
+            i.ID,
+            i.RequesterEmail,
+            i.ProfileID,
+            p.*
+        FROM interested i
+        INNER JOIN profile p
+            ON p.RegisterID = i.ProfileID
+        WHERE i.RequesterEmail = ?
+        ORDER BY i.CreatedAt DESC
+    `;
+
+    db.query(sql, [email], (err, results) => {
+        if (err) {
+            console.error("Error fetching interested profiles:", err);
+            return res.status(500).json({
+                error: "Database error",
+                details: err.message
+            });
+        }
+        res.status(200).json(results);
+    });
+};
+
+// Admin
+const AllInterested = (req, res) => {
+    db.query("SELECT * FROM interested", (err, result) => {
+        if (err) return res.status(500).json(err);
+        res.json(result);
+    });
+};
+//////////
+
+const updateInterest = (req, res) => {
+    const { requesterEmail, profileId, intrest } = req.body;
+
+    if (!requesterEmail || !profileId || !intrest) {
+        return res.status(400).json({
+            error: "requesterEmail, profileId and intrest are required"
+        });
+    }
+    const sql = `UPDATE interested SET Intrest = ? WHERE RequesterEmail = ? AND ProfileID = ? `;
+
+    db.query(
+        sql,
+        [intrest, requesterEmail, profileId],
+        (err, result) => {
+            if (err) {
+                console.error("Error updating interest:", err);
+                return res.status(500).json({
+                    error: "Database error",
+                    details: err.message
+                });
+            }
+            if (result.affectedRows === 0) {
+                return res.status(404).json({
+                    error: "Interested record not found"
+                });
+            }
+            res.status(200).json({
+                message: "Interest updated successfully",
+                requesterEmail,
+                profileId,
+                intrest
+            });
+        }
+    );
+};
+
+const deleteInterest = (req, res) => {
+    const { requesterEmail, profileId } = req.body;
+
+    if (!requesterEmail || !profileId ) {
+        return res.status(400).json({
+            error: "requesterEmail, profileId are required"
+        });
+    }
+    const sql = `DELETE FROM interested WHERE RequesterEmail = ? AND ProfileID = ?`;
+    db.query(sql,[requesterEmail, profileId],
+        (err, result) => {
+            if (err) {
+                console.error("Error deleting interest:", err);
+                return res.status(500).json({
+                    error: "Database error",
+                    details: err.message
+                });
+            }
+            if (result.affectedRows === 0) {
+                return res.status(404).json({
+                    error: "Interested record not found"
+                });
+            }
+            res.status(200).json({
+                message: "Interest deleted successfully",
+                requesterEmail,
+                profileId,
+            });
+        }
+    );
+};
+
+const getYesInterested = (req, res) => {
+    const { email } = req.params;
+
+    const sql = `
+        SELECT
+            i.ID,
+            i.RequesterEmail,
+            i.ProfileID,
+            i.Intrest,
+            i.CreatedAt,
+            p.*
+        FROM interested i
+        INNER JOIN profile p
+            ON p.RegisterID = i.ProfileID
+        WHERE i.Intrest = 'Yes'
+          AND i.RequesterEmail = ?
+        ORDER BY i.CreatedAt DESC
+    `;
+
+    db.query(sql, [email], (err, results) => {
+        if (err) {
+            console.error("Error fetching Yes interests:", err);
+
+            return res.status(500).json({
+                error: "Database error",
+                details: err.message
+            });
+        }
+
+        res.status(200).json(results);
+    });
+};
+
+const getNoInterested = (req, res) => {
+    const { email } = req.params;
+
+    const sql = `
+        SELECT
+            i.ID,
+            i.RequesterEmail,
+            i.ProfileID,
+            i.Intrest,
+            i.CreatedAt,
+            p.*
+        FROM interested i
+        INNER JOIN profile p
+            ON p.RegisterID = i.ProfileID
+        WHERE i.Intrest = 'No'
+          AND i.RequesterEmail = ?
+        ORDER BY i.CreatedAt DESC
+    `;
+    db.query(sql, [email], (err, results) => {
+        if (err) {
+            console.error("Error fetching No interests:", err);
+            return res.status(500).json({
+                error: "Database error",
+                details: err.message
+            });
+        }
+        res.status(200).json(results);
+    });
+};
+
+module.exports = {
+    addInterested,
+    getInterested,
+    AllInterested,
+    updateInterest,
+    deleteInterest,
+    getYesInterested,
+    getNoInterested
+
+};

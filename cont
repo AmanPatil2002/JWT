@@ -1,287 +1,1059 @@
-const db = require("../config/database");
+import {
+    Box,
+    Container,
+    CssBaseline,
+    Grid,
+    Paper,
+    Typography,
+    Divider,
+    Card,
+    CardContent,
+    CardMedia,
+    Avatar,
+    Chip,
+    Button,
+    Dialog,
+    DialogTitle,
+    DialogContent,
+    DialogActions,
+    TextField,
+    Skeleton,
+    InputAdornment,
+    MenuItem,
+    Select,
+    FormControl,
+    InputLabel,
+} from "@mui/material";
+import { styled } from "@mui/material/styles";
+import SearchIcon from '@mui/icons-material/Search';
+import FilterListIcon from '@mui/icons-material/FilterList';
+import PersonIcon from '@mui/icons-material/Person';
+import LocationOnIcon from '@mui/icons-material/LocationOn';
+import SchoolIcon from '@mui/icons-material/School';
+import WorkIcon from '@mui/icons-material/Work';
+import FavoriteIcon from '@mui/icons-material/Favorite';
+import InfoIcon from '@mui/icons-material/Info';
+import { useState, useEffect, useCallback } from "react";
+import { useNavigate } from "react-router-dom";
+import axios from "axios";
 
-const addInterested = (req, res) => {
-    const { requesterEmail, profileId, intrest } = req.body;
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
-    if (!requesterEmail || !profileId) {
-        return res.status(400).json({
-            error: "requesterEmail and profileId are required"
-        });
-    }
+const StyledPaper = styled(Paper)(({ theme }) => ({
+    padding: theme.spacing(3),
+    borderRadius: 16,
+    boxShadow: '0 8px 32px rgba(0,0,0,0.1)',
+    [theme.breakpoints.down('sm')]: {
+        padding: theme.spacing(2),
+        borderRadius: 12,
+    },
+}));
 
-    const interestValue = intrest || "Interested"; // default value
+const ProfileCard = styled(Card)(() => ({
+    height: '100%',
+    transition: 'transform 0.3s, box-shadow 0.3s',
+    cursor: 'pointer',
+    position: 'relative',
+    overflow: 'visible',
+    '&:hover': {
+        transform: 'translateY(-8px)',
+        boxShadow: '0 12px 40px rgba(0,0,0,0.15)',
+    },
+}));
 
-    db.query(
-        "SELECT ID FROM interested WHERE RequesterEmail = ? AND ProfileID = ?",
-        [requesterEmail, profileId],
-        (err, existing) => {
-            if (err) {
-                console.error("Error checking existing interest:", err);
-                return res.status(500).json({ error: "Database error", details: err.message });
-            }
-            if (existing.length > 0) {
-                return res.status(409).json({
-                    error: "Interest already exists for this profile",
-                    existingId: existing[0].ID
-                });
-            }
 
-            const sql = `INSERT INTO interested (RequesterEmail, ProfileID, Intrest) VALUES (?, ?, ?)`;
-            const values = [requesterEmail, profileId, interestValue];
+export default function Match() {
+    const navigate = useNavigate();
+    const [profiles, setProfiles] = useState([]);
+    const [filteredProfiles, setFilteredProfiles] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [selectedProfile, setSelectedProfile] = useState(null);
+    const [detailOpen, setDetailOpen] = useState(false);
 
-            db.query(sql, values, (err, result) => {
-                if (err) {
-                    console.error("Database error:", err);
-                    return res.status(500).json({
-                        error: "Failed to create interest",
-                        details: err.message
-                    });
-                }
+    const [sendingInterest, setSendingInterest] = useState(false);
+    const [interestStatus, setInterestStatus] = useState(null);
 
-                res.status(201).json({
-                    message: "Interest created successfully",
-                    interest: {
-                        ID: result.insertId,
-                        RequesterEmail: requesterEmail,
-                        ProfileID: profileId,
-                        Intrest: interestValue
-                    }
-                });
-            });
-        }
-    );
-};
-
-const getInterested = (req, res) => {
-    const { email } = req.params;
-    if (!email) {
-        return res.status(400).json({
-            error: "Email is required"
-        });
-    }
-    const sql = `
-        SELECT
-            i.ID,
-            i.RequesterEmail,
-            i.ProfileID,
-            p.*
-        FROM interested i
-        INNER JOIN profile p
-            ON p.RegisterID = i.ProfileID
-        WHERE i.RequesterEmail = ?
-        ORDER BY i.CreatedAt DESC
-    `;
-
-    db.query(sql, [email], (err, results) => {
-        if (err) {
-            console.error("Error fetching interested profiles:", err);
-            return res.status(500).json({
-                error: "Database error",
-                details: err.message
-            });
-        }
-        res.status(200).json(results);
+    const [searchTerm, setSearchTerm] = useState('');
+    const [filters, setFilters] = useState({
+        religion: '',
+        language: '',
+        minAge: '',
+        maxAge: '',
+        maritalStatus: '',
     });
-};
+    const [showFilters, setShowFilters] = useState(false);
+    const currentUserEmail = localStorage.getItem('email');
 
-// Admin
-const AllInterested = (req, res) => {
-    db.query("SELECT * FROM interested", (err, result) => {
-        if (err) return res.status(500).json(err);
-        res.json(result);
-    });
-};
-//////////
+    const [hasProfile, setHasProfile] = useState(false);
+    const [checkingProfile, setCheckingProfile] = useState(true);
+    const [currentUserGender, setCurrentUserGender] = useState(null);
 
-const updateInterest = (req, res) => {
-    const { requesterEmail, profileId, intrest } = req.body;
 
-    if (!requesterEmail || !profileId || !intrest) {
-        return res.status(400).json({
-            error: "requesterEmail, profileId and intrest are required"
-        });
-    }
-    const sql = `UPDATE interested SET Intrest = ? WHERE RequesterEmail = ? AND ProfileID = ? `;
+    useEffect(() => {
+        checkOwnProfile();
+        fetchProfiles();
+    }, []);
 
-    db.query(
-        sql,
-        [intrest, requesterEmail, profileId],
-        (err, result) => {
-            if (err) {
-                console.error("Error updating interest:", err);
-                return res.status(500).json({
-                    error: "Database error",
-                    details: err.message
-                });
+    const checkOwnProfile = async () => {
+        const userEmail = localStorage.getItem("email");
+        if (!userEmail) {
+            setHasProfile(false);
+            setCheckingProfile(false);
+            return;
+        }
+        try {
+            const res = await axios.get(`${API_URL}/profile/profile`);
+            const allProfiles = Array.isArray(res.data) ? res.data : [res.data];
+            const mine = allProfiles.find(p => p.Email === userEmail);
+            setHasProfile(Boolean(mine?.RegisterID));
+            setCurrentUserGender(mine?.Gender || null);
+        } catch (err) {
+            console.log("Error checking own profile:", err);
+            setHasProfile(false);
+        } finally {
+            setCheckingProfile(false);
+        }
+    };
+
+
+    const fetchProfiles = async () => {
+        setLoading(true);
+        try {
+            const res = await axios.get(`${API_URL}/profile/profile`);
+            console.log("Fetched profiles:", res.data);
+
+            let allProfiles = res.data;
+            if (!Array.isArray(allProfiles)) {
+                allProfiles = [allProfiles];
             }
-            if (result.affectedRows === 0) {
-                return res.status(404).json({
-                    error: "Interested record not found"
-                });
+            const otherProfiles = currentUserEmail
+                ? allProfiles.filter(profile => profile.Email !== currentUserEmail)
+                : allProfiles
+
+            setProfiles(otherProfiles);
+            setFilteredProfiles(otherProfiles);
+        } catch (err) {
+            console.log('Error fetching profiles:', err);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleSendInterest = async (profile) => {
+        if (!hasProfile) {
+            setInterestStatus('no-profile');
+            return;
+        }
+        if (!currentUserEmail) {
+            setInterestStatus('error');
+            console.error("Current user email not found");
+            return;
+        }
+        if (!profile?.RegisterID) {
+            setInterestStatus('error');
+            console.error("Profile RegisterID is missing:", profile);
+            return;
+        }
+        setSendingInterest(true);
+        setInterestStatus(null);
+        try {
+            const res = await axios.post(`${API_URL}/user/intrest`, {
+                requesterEmail: currentUserEmail,
+                profileId: profile.RegisterID,
+                intrest: "Intrested",
+            });
+
+            console.log("Interest sent:", res.data);
+            setInterestStatus('success');
+
+        } catch (err) {
+            console.error("Error sending interest:", err);
+            console.error("Status:", err.response?.status);
+            console.error("Backend response:", err.response?.data);
+            if (err.response?.status === 409) {
+                setInterestStatus('already-sent');
+            } else {
+                setInterestStatus('error');
             }
-            res.status(200).json({
-                message: "Interest updated successfully",
-                requesterEmail,
-                profileId,
-                intrest
-            });
+        } finally {
+            setSendingInterest(false);
         }
-    );
-};
+    };
 
-const deleteInterest = (req, res) => {
-    const { requesterEmail, profileId } = req.body;
+    const applyFilters = useCallback(() => {
+        let filtered = [...profiles];
 
-    if (!requesterEmail || !profileId ) {
-        return res.status(400).json({
-            error: "requesterEmail, profileId are required"
+        if (currentUserGender) {
+            const oppositeGender = currentUserGender === 'Male' ? 'Female' : 'Male';
+            filtered = filtered.filter(profile => profile.Gender === oppositeGender);
+        }
+
+        if (searchTerm) {
+            const term = searchTerm.toLowerCase();
+            filtered = filtered.filter(profile =>
+                profile.Name?.toLowerCase().includes(term) ||
+                profile.Occupation?.toLowerCase().includes(term) ||
+                profile.Education?.toLowerCase().includes(term) ||
+                profile.Address?.toLowerCase().includes(term)
+            );
+        }
+
+        if (filters.religion) {
+            filtered = filtered.filter(profile => profile.Religion === filters.religion);
+        }
+        if (filters.language) {
+            filtered = filtered.filter(profile => profile.Language === filters.language);
+        }
+        if (filters.minAge) {
+            filtered = filtered.filter(profile => profile.Age >= parseInt(filters.minAge));
+        }
+        if (filters.maxAge) {
+            filtered = filtered.filter(profile => profile.Age <= parseInt(filters.maxAge));
+        }
+        if (filters.maritalStatus) {
+            filtered = filtered.filter(profile => profile.Status === filters.maritalStatus);
+        }
+        setFilteredProfiles(filtered);
+    }, [profiles, searchTerm, filters, currentUserGender]);
+
+    useEffect(() => {
+        applyFilters();
+    }, [applyFilters]);
+
+    const handleProfileClick = (profile) => {
+        setSelectedProfile(profile);
+        setDetailOpen(true);
+    };
+
+    const handleFilterChange = (field) => (event) => {
+        setFilters(prev => ({
+            ...prev,
+            [field]: event.target.value
+        }));
+    };
+
+    const clearFilters = () => {
+        setSearchTerm('');
+        setFilters({
+            religion: '',
+            language: '',
+            minAge: '',
+            maxAge: '',
+            maritalStatus: '',
         });
+    };
+
+    const getImageUrl = (imagePath) => {
+        if (!imagePath) return null;
+        if (imagePath.startsWith('http')) return imagePath;
+        const cleanPath = imagePath.replace(/^\/+/, '');
+        return `${API_URL}/${cleanPath}`;
+    };
+
+    const ProfileDetailDialog = ({
+        detailOpen,
+        setDetailOpen,
+        selectedProfile,
+        getImageUrl,
+        handleSendInterest,
+    }) => {
+        return (
+            <Dialog
+                open={detailOpen}
+                onClose={() => setDetailOpen(false)}
+                fullWidth
+                maxWidth="lg"
+                fullScreen={false}
+                sx={{
+                    '& .MuiDialog-paper': {
+                        width: '100%',
+                        maxWidth: { xs: '100%', sm: '95%', md: '90%', lg: '1200px' },
+                        maxHeight: { xs: '100vh', sm: '95vh' },
+                        margin: { xs: 0, sm: 2 },
+                        borderRadius: { xs: 0, sm: 2 },
+                    },
+                }}
+            >
+                {selectedProfile && (
+                    <>
+
+                        <DialogTitle
+                            sx={{
+                                display: 'flex',
+                                justifyContent: 'space-between',
+                                alignItems: 'center',
+                                background:
+                                    selectedProfile.Gender === 'Female'
+                                        ? 'linear-gradient(135deg,rgb(245, 118, 160) 0%, #f8bbd0 100%)'
+                                        : 'linear-gradient(135deg,rgb(29, 156, 248) 0%, #bbdefb 100%)',
+                                color: 'white',
+                                px: { xs: 2, sm: 3 },
+                                py: { xs: 1.5, sm: 2 },
+                            }}
+                        >
+                            <Typography
+                                variant="h5"
+                                fontWeight="bold"
+                                sx={{
+                                    fontSize: { xs: '1.15rem', sm: '1.5rem' },
+                                    lineHeight: 1.3,
+                                }}
+                            >
+                                {selectedProfile.Name}'s Profile
+                            </Typography>
+                        </DialogTitle>
+
+                        <DialogContent
+                            dividers
+                            sx={{
+                                p: { xs: 2, sm: 3 },
+                                overflowX: 'hidden',
+                            }}
+                        >
+                            <Grid
+                                container
+                                spacing={{ xs: 2, md: 3 }}
+                            >
+
+                                <Grid size={{ xs: 12, md: 4 }}>
+                                    <Box
+                                        sx={{
+                                            textAlign: 'center',
+                                            width: '100%',
+                                        }}
+                                    >
+                                        <Avatar
+                                            src={getImageUrl(selectedProfile.Image)}
+                                            alt={selectedProfile.Name}
+                                            variant="rounded"
+                                            sx={{
+                                                width: {
+                                                    xs: 180,
+                                                    sm: 220,
+                                                    md: 280,
+                                                },
+                                                height: {
+                                                    xs: 240,
+                                                    sm: 290,
+                                                    md: 370,
+                                                },
+                                                maxWidth: '100%',
+                                                mx: 'auto',
+                                                mb: 2,
+                                                borderRadius: 2,
+                                                boxShadow:
+                                                    '0 4px 12px rgba(0,0,0,0.1)',
+                                            }}
+                                        >
+                                            <PersonIcon
+                                                sx={{
+                                                    fontSize: {
+                                                        xs: 70,
+                                                        sm: 90,
+                                                        md: 100,
+                                                    },
+                                                }}
+                                            />
+                                        </Avatar>
+
+                                        <Typography
+                                            variant="h6"
+                                            gutterBottom
+                                            sx={{
+                                                fontSize: {
+                                                    xs: '1rem',
+                                                    sm: '1.25rem',
+                                                },
+                                            }}
+                                        >
+                                            {selectedProfile.Name}
+                                        </Typography>
+
+                                        <Box
+                                            sx={{
+                                                display: 'flex',
+                                                gap: 1,
+                                                justifyContent: 'center',
+                                                flexWrap: 'wrap',
+                                            }}
+                                        >
+                                            <Chip
+                                                label={`${selectedProfile.Age} years`}
+                                                size="small"
+                                                color="secondary"
+                                            />
+
+                                            <Chip
+                                                label={`${selectedProfile.Height} ft`}
+                                                size="small"
+                                                color="primary"
+                                            />
+                                        </Box>
+                                    </Box>
+                                </Grid>
+
+
+                                <Grid size={{ xs: 12, md: 8 }}>
+
+                                    <Typography
+                                        variant="h6"
+                                        gutterBottom
+                                        sx={{
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            gap: 1,
+                                            color: '#c2185b',
+                                            fontSize: {
+                                                xs: '1rem',
+                                                sm: '1.25rem',
+                                            },
+                                        }}
+                                    >
+                                        <InfoIcon />
+                                        Personal Information
+                                    </Typography>
+
+                                    <Grid
+                                        container
+                                        spacing={{ xs: 1.5, sm: 2 }}
+                                    >
+                                        <Grid size={{ xs: 12, sm: 6, md: 4 }}>
+                                            <Typography
+                                                variant="body2"
+                                                color="text.secondary"
+                                                sx={{ overflowWrap: 'anywhere' }}
+                                            >
+                                                <b>Gender: </b>
+                                                {selectedProfile.Gender || 'Not specified'}
+                                            </Typography>
+                                        </Grid>
+
+                                        <Grid size={{ xs: 12, sm: 6, md: 4 }}>
+                                            <Typography
+                                                variant="body2"
+                                                color="text.secondary"
+                                                sx={{ overflowWrap: 'anywhere' }}
+                                            >
+                                                <b>Religion: </b>
+                                                {selectedProfile.Religion || 'Not specified'}
+                                            </Typography>
+                                        </Grid>
+
+                                        <Grid size={{ xs: 12, sm: 6, md: 4 }}>
+                                            <Typography
+                                                variant="body2"
+                                                color="text.secondary"
+                                                sx={{ overflowWrap: 'anywhere' }}
+                                            >
+                                                <b>Mother Tongue: </b>
+                                                {selectedProfile.Language || 'Not specified'}
+                                            </Typography>
+                                        </Grid>
+
+                                        <Grid size={{ xs: 12, sm: 6, md: 4 }}>
+                                            <Box
+                                                sx={{
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    gap: 0.5,
+                                                    flexWrap: 'wrap',
+                                                }}
+                                            >
+                                                <Typography
+                                                    variant="body2"
+                                                    color="text.secondary"
+                                                >
+                                                    <b>Marital Status:</b>
+                                                </Typography>
+
+                                                <Chip
+                                                    label={
+                                                        selectedProfile.Status ||
+                                                        'Not specified'
+                                                    }
+                                                    size="small"
+                                                />
+                                            </Box>
+                                        </Grid>
+
+                                        <Grid size={{ xs: 12, sm: 6, md: 4 }}>
+                                            <Typography
+                                                variant="body2"
+                                                color="text.secondary"
+                                                sx={{
+                                                    display: 'flex',
+                                                    alignItems: 'flex-start',
+                                                    overflowWrap: 'anywhere',
+                                                }}
+                                            >
+                                                <LocationOnIcon
+                                                    fontSize="small"
+                                                    sx={{
+                                                        flexShrink: 0,
+                                                        mr: 0.5,
+                                                    }}
+                                                />
+
+                                                {selectedProfile.Address ||
+                                                    'Not specified'}
+                                            </Typography>
+                                        </Grid>
+
+                                        <Grid size={{ xs: 12, sm: 6, md: 4 }}>
+                                            <Typography
+                                                variant="body2"
+                                                color="text.secondary"
+                                                sx={{ overflowWrap: 'anywhere' }}
+                                            >
+                                                <b>Date of Birth: </b>
+                                                {selectedProfile.DOB
+                                                    ? new Date(
+                                                        selectedProfile.DOB
+                                                    ).toLocaleString('en-IN', {
+                                                        day: '2-digit',
+                                                        month: 'long',
+                                                        year: 'numeric',
+                                                    })
+                                                    : 'Not specified'}
+                                            </Typography>
+                                        </Grid>
+                                    </Grid>
+
+                                    <Divider sx={{ my: 2 }} />
+
+                                    <Typography
+                                        variant="h6"
+                                        gutterBottom
+                                        sx={{
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            gap: 1,
+                                            color: '#c2185b',
+                                            fontSize: {
+                                                xs: '1rem',
+                                                sm: '1.25rem',
+                                            },
+                                        }}
+                                    >
+                                        <SchoolIcon />
+                                        Education & Career
+                                    </Typography>
+
+                                    <Grid
+                                        container
+                                        spacing={{ xs: 1.5, sm: 2 }}
+                                    >
+                                        <Grid size={{ xs: 12, sm: 6 }}>
+                                            <Typography
+                                                variant="body2"
+                                                color="text.secondary"
+                                                sx={{ overflowWrap: 'anywhere' }}
+                                            >
+                                                <b>Education: </b>
+                                                {selectedProfile.Education ||
+                                                    'Not specified'}
+                                            </Typography>
+                                        </Grid>
+
+                                        <Grid size={{ xs: 12, sm: 6 }}>
+                                            <Typography
+                                                variant="body2"
+                                                color="text.secondary"
+                                                sx={{ overflowWrap: 'anywhere' }}
+                                            >
+                                                <b>Occupation: </b>
+                                                {selectedProfile.Occupation ||
+                                                    'Not specified'}
+                                            </Typography>
+                                        </Grid>
+
+                                        <Grid size={{ xs: 12, sm: 6 }}>
+                                            <Typography
+                                                variant="body2"
+                                                color="text.secondary"
+                                                sx={{ overflowWrap: 'anywhere' }}
+                                            >
+                                                <b>Company: </b>
+                                                {selectedProfile.CompanyName ||
+                                                    'Not specified'}
+                                            </Typography>
+                                        </Grid>
+
+                                        <Grid size={{ xs: 12, sm: 6 }}>
+                                            <Typography
+                                                variant="body2"
+                                                color="text.secondary"
+                                                sx={{ overflowWrap: 'anywhere' }}
+                                            >
+                                                <b>Monthly Income: </b>
+                                                {selectedProfile.MonthlyIncome
+                                                    ? `₹${parseInt(
+                                                        selectedProfile.MonthlyIncome
+                                                    ).toLocaleString()}`
+                                                    : 'Not specified'}
+                                            </Typography>
+                                        </Grid>
+                                    </Grid>
+
+
+                                    {selectedProfile.Detail && (
+                                        <>
+                                            <Divider sx={{ my: 2 }} />
+
+                                            <Typography
+                                                variant="h6"
+                                                gutterBottom
+                                                sx={{
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    gap: 1,
+                                                    color: '#c2185b',
+                                                    fontSize: {
+                                                        xs: '1rem',
+                                                        sm: '1.25rem',
+                                                    },
+                                                }}
+                                            >
+                                                <FavoriteIcon />
+                                                About Me
+                                            </Typography>
+
+                                            <Paper
+                                                sx={{
+                                                    p: { xs: 1.5, sm: 2 },
+                                                    bgcolor: '#fdf2f8',
+                                                    borderRadius: 2,
+                                                    overflowWrap: 'anywhere',
+                                                }}
+                                            >
+                                                <Typography
+                                                    variant="body1"
+                                                    sx={{
+                                                        whiteSpace: 'pre-line',
+                                                        lineHeight: 1.8,
+                                                        fontSize: {
+                                                            xs: '0.9rem',
+                                                            sm: '1rem',
+                                                        },
+                                                    }}
+                                                >
+                                                    {selectedProfile.Detail}
+                                                </Typography>
+                                            </Paper>
+                                        </>
+                                    )}
+
+
+                                    {selectedProfile.Physically && (
+                                        <>
+                                            <Divider sx={{ my: 2 }} />
+
+                                            <Typography
+                                                variant="body2"
+                                                color="text.secondary"
+                                            >
+                                                Physical Status
+                                            </Typography>
+
+                                            <Chip
+                                                label={
+                                                    selectedProfile.Physically === 'Yes'
+                                                        ? 'Physically Challenged'
+                                                        : 'Not Physically Challenged'
+                                                }
+                                                size="small"
+                                                color={
+                                                    selectedProfile.Physically === 'Yes'
+                                                        ? 'warning'
+                                                        : 'success'
+                                                }
+                                                sx={{ mt: 1 }}
+                                            />
+                                        </>
+                                    )}
+                                </Grid>
+                            </Grid>
+                        </DialogContent>
+
+
+                        <DialogActions
+                            sx={{
+                                flexDirection: { xs: 'column', sm: 'row' },
+                                alignItems: { xs: 'stretch', sm: 'center' },
+                                justifyContent: 'space-between',
+                                gap: 1,
+                                p: { xs: 1.5, sm: 2 },
+                            }}
+                        >
+
+                            <Box
+                                sx={{
+                                    flex: 1,
+                                    textAlign: {
+                                        xs: 'center',
+                                        sm: 'left',
+                                    },
+                                }}
+                            >
+                                {interestStatus === 'no-profile' && (
+                                    <Typography
+                                        variant="body2"
+                                        color="warning.main"
+                                    >
+                                        Please Create Profile To add Interest
+                                    </Typography>
+                                )}
+
+                                {interestStatus === 'success' && (
+                                    <Typography
+                                        variant="body2"
+                                        color="success.main"
+                                    >
+                                        Interest sent successfully!
+                                    </Typography>
+                                )}
+
+                                {interestStatus === 'error' && (
+                                    <Typography
+                                        variant="body2"
+                                        color="error.main"
+                                    >
+                                        Failed to send interest. Please try again.
+                                    </Typography>
+                                )}
+                            </Box>
+
+                            <Box
+                                sx={{
+                                    display: 'flex',
+                                    gap: 1,
+                                    width: { xs: '100%', sm: 'auto' },
+                                    flexDirection: { xs: 'column', sm: 'row' },
+                                }}
+                            >
+                                <Button
+                                    onClick={() => setDetailOpen(false)}
+                                    variant="outlined"
+                                    fullWidth
+                                    sx={{
+                                        minWidth: { sm: 100 },
+                                    }}
+                                >
+                                    Close
+                                </Button>
+
+                                <Button
+                                    variant="contained"
+                                    fullWidth
+                                    disabled={
+                                        sendingInterest ||
+                                        interestStatus === 'success'
+                                    }
+                                    sx={{
+                                        minWidth: { sm: 160 },
+                                        background:
+                                            'linear-gradient(45deg, #c2185b 30%, #e91e63 90%)',
+                                    }}
+                                    onClick={() => {
+                                        if (!hasProfile) {
+                                            navigate('/profile');
+                                            return;
+                                        }
+
+                                        handleSendInterest(selectedProfile);
+                                    }}
+                                >
+                                    {!hasProfile
+                                        ? 'Create Profile First'
+                                        : sendingInterest
+                                            ? 'Sending...'
+                                            : interestStatus === 'success'
+                                                ? 'Sent'
+                                                : 'Send Interest'}
+                                </Button>
+                            </Box>
+                        </DialogActions>
+                    </>
+                )}
+            </Dialog>
+        );
     }
-    const sql = `DELETE FROM interested WHERE RequesterEmail = ? AND ProfileID = ?`;
-    db.query(sql,[requesterEmail, profileId],
-        (err, result) => {
-            if (err) {
-                console.error("Error deleting interest:", err);
-                return res.status(500).json({
-                    error: "Database error",
-                    details: err.message
-                });
-            }
-            if (result.affectedRows === 0) {
-                return res.status(404).json({
-                    error: "Interested record not found"
-                });
-            }
-            res.status(200).json({
-                message: "Interest deleted successfully",
-                requesterEmail,
-                profileId,
-            });
-        }
-    );
-};
 
-const getYesInterested = (req, res) => {
-    const { email } = req.params;
+        const ProfileCardSkeleton = () => (
+            <Grid item xs={12} sm={6} md={4} lg={3}>
+                <Card>
+                    <Skeleton variant="rectangular" height={200} />
+                    <CardContent>
+                        <Skeleton variant="text" width="60%" height={30} />
+                        <Skeleton variant="text" width="40%" />
+                        <Skeleton variant="text" width="80%" />
+                    </CardContent>
+                </Card>
+            </Grid>
+        );
 
-    if (!email) {
-        return res.status(400).json({
-            error: "Email is required"
-        });
+        return (
+            <>
+                <CssBaseline />
+                <Box sx={{
+                    minHeight: '100vh',
+                    py: { xs: 2, sm: 3, md: 4 },
+                    px: { xs: 1, sm: 2, md: 0 },
+                }}>
+                    <Container maxWidth="xl">
+                        <StyledPaper elevation={3}>
+                            <Box sx={{ textAlign: 'center' }} mb={4}>
+                                <Typography variant="h4" fontWeight="bold" sx={{ color: '#c2185b', textAlign: 'center' }}>
+                                    Find Your Perfect Match
+                                </Typography>
+                                <Typography variant="subtitle1" color="text.secondary" mt={1} sx={{ textAlign: 'center' }}>
+                                    Browse through profiles and find your soulmate
+                                </Typography>
+                            </Box>
+                            <Divider sx={{ mb: 3 }} />
+                            <Box sx={{ mb: 4 }}>
+                                <Grid container spacing={{ xs: 2, md: 2 }} columns={{ xs: 4, sm: 8, md: 12 }} alignItems="center">
+                                    <Grid size={{ xs: 4, sm: 6, md: 9 }}>
+                                        <TextField
+                                            fullWidth
+                                            placeholder="Search by name, occupation, education, location..."
+                                            value={searchTerm}
+                                            onChange={(e) => setSearchTerm(e.target.value)}
+                                            InputProps={{
+                                                startAdornment: (
+                                                    <InputAdornment position="start">
+                                                        <SearchIcon />
+                                                    </InputAdornment>
+                                                ),
+                                            }}
+                                        />
+                                    </Grid>
+                                    <Grid item size={{ xs: 4, sm: 2, md: 3 }}>
+                                        <Button
+                                            fullWidth
+                                            variant={showFilters ? "contained" : "contained"}
+                                            startIcon={<FilterListIcon />}
+                                            onClick={() => setShowFilters(!showFilters)}
+                                            sx={showFilters ? {
+                                                background: 'linear-gradient(45deg, #c2185b 30%, #e91e63 90%)',
+                                            } : {}}
+                                        >
+                                            Filters
+                                        </Button>
+                                    </Grid>
+                                </Grid>
+
+                                {showFilters && (
+                                    <Box sx={{ mt: 3, p: 2, bgcolor: '#f5f5f5', borderRadius: 2 }}>
+                                        <Grid container spacing={{ xs: 1, md: 1 }} columns={{ xs: 4, sm: 12, md: 12 }}>
+
+                                            <Grid size={{ xs: 2, sm: 4, md: 2 }}>
+                                                <FormControl fullWidth size="small">
+                                                    <InputLabel>Religion</InputLabel>
+                                                    <Select
+                                                        value={filters.religion}
+                                                        onChange={handleFilterChange('religion')}
+                                                        label="Religion"
+                                                    >
+                                                        <MenuItem value="">All</MenuItem>
+                                                        <MenuItem value="Hindu">Hindu</MenuItem>
+                                                        <MenuItem value="Muslim">Muslim</MenuItem>
+                                                        <MenuItem value="Christian">Christian</MenuItem>
+                                                        <MenuItem value="Sikh">Sikh</MenuItem>
+                                                        <MenuItem value="Jain">Jain</MenuItem>
+                                                    </Select>
+                                                </FormControl>
+                                            </Grid>
+                                            <Grid size={{ xs: 2, sm: 4, md: 2 }}>
+                                                <FormControl fullWidth size="small">
+                                                    <InputLabel>Language</InputLabel>
+                                                    <Select
+                                                        value={filters.language}
+                                                        onChange={handleFilterChange('language')}
+                                                        label="Language"
+                                                    >
+                                                        <MenuItem value="">All</MenuItem>
+                                                        <MenuItem value="Hindi">Hindi</MenuItem>
+                                                        <MenuItem value="Marathi">Marathi</MenuItem>
+                                                        <MenuItem value="Gujarati">Gujarati</MenuItem>
+                                                        <MenuItem value="Tamil">Tamil</MenuItem>
+                                                        <MenuItem value="Telugu">Telugu</MenuItem>
+                                                        <MenuItem value="English">English</MenuItem>
+                                                    </Select>
+                                                </FormControl>
+                                            </Grid>
+                                            <Grid size={{ xs: 2, sm: 4, md: 2 }}>
+                                                <FormControl fullWidth size="small">
+                                                    <InputLabel>Marital Status</InputLabel>
+                                                    <Select
+                                                        value={filters.maritalStatus}
+                                                        onChange={handleFilterChange('maritalStatus')}
+                                                        label="Marital Status"
+                                                    >
+                                                        <MenuItem value="">All</MenuItem>
+                                                        <MenuItem value="Single">Single</MenuItem>
+                                                        <MenuItem value="Divorced">Divorced</MenuItem>
+                                                        <MenuItem value="Widowed">Widowed</MenuItem>
+                                                    </Select>
+                                                </FormControl>
+                                            </Grid>
+                                            <Grid size={{ xs: 2, sm: 4, md: 2 }}>
+                                                <TextField
+                                                    fullWidth
+                                                    size="small"
+                                                    label="Min Age"
+                                                    type="number"
+                                                    value={filters.minAge}
+                                                    onChange={handleFilterChange('minAge')}
+                                                    inputProps={{ min: 18, max: 100 }}
+                                                />
+                                            </Grid>
+                                            <Grid size={{ xs: 2, sm: 4, md: 2 }}>
+                                                <TextField
+                                                    fullWidth
+                                                    size="small"
+                                                    label="Max Age"
+                                                    type="number"
+                                                    value={filters.maxAge}
+                                                    onChange={handleFilterChange('maxAge')}
+                                                    inputProps={{ min: 18, max: 100 }}
+                                                />
+                                            </Grid>
+                                            <Grid size={{ xs: 2, sm: 4, md: 2 }}>
+                                                <Button
+                                                    fullWidth
+                                                    onClick={clearFilters}
+                                                    color="secondary"
+                                                    variant="contained"
+                                                >
+                                                    Reset
+                                                </Button>
+                                            </Grid>
+                                        </Grid>
+                                    </Box>
+                                )}
+                            </Box>
+                            <Grid container spacing={{ xs: 2, md: 3 }} columns={{ xs: 4, sm: 8, md: 12 }}>
+                                <Grid size={{ xs: 4, sm: 8, md: 12 }}>
+                                    <Typography variant="h6" color="text.secondary" sx={{ textAlign: 'center', paddingBottom: 2 }}>
+                                        {filteredProfiles.length} profile{filteredProfiles.length !== 1 ? 's' : ''} found
+                                    </Typography>
+                                </Grid>
+                            </Grid>
+                            {loading ? (
+                                <Grid container spacing={3}>
+                                    {[...Array(8)].map((_, index) => (
+                                        <ProfileCardSkeleton key={index} />
+                                    ))}
+                                </Grid>
+                            ) : filteredProfiles.length === 0 ? (
+                                <Box sx={{ textAlign: 'center', py: 8 }}>
+                                    <PersonIcon sx={{ fontSize: 80, color: 'text.secondary', mb: 2 }} />
+                                    <Typography variant="h5" color="text.secondary" gutterBottom>
+                                        No Profiles Found
+                                    </Typography>
+                                    <Typography variant="body1" color="text.secondary" gutterBottom>
+                                        Try adjusting your search filters or check back later
+                                    </Typography>
+                                    <Button
+                                        variant="outlined"
+                                        onClick={clearFilters}
+                                        sx={{ mt: 2 }}
+                                    >
+                                        Clear Filters
+                                    </Button>
+                                </Box>
+                            ) : (
+                                <Grid container spacing={{ xs: 2, md: 3 }} columns={{ xs: 4, sm: 8, md: 12 }}>
+                                    {filteredProfiles.map((profile) => (
+
+                                        <Grid size={{ xs: 4, sm: 4, md: 3 }} key={profile.RegisterID}>
+                                            <ProfileCard onClick={() => handleProfileClick(profile)}>
+
+                                                <CardMedia
+                                                    component="div"
+                                                    sx={{
+                                                        height: 200,
+                                                        background: profile.Gender === 'Female'
+                                                            ? 'linear-gradient(135deg,rgb(245, 118, 160) 0%, #f8bbd0 100%)'
+                                                            : 'linear-gradient(135deg,rgb(29, 156, 248) 0%, #bbdefb 100%)',
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        justifyContent: 'center',
+                                                    }}
+                                                >
+                                                    <Avatar
+                                                        src={getImageUrl(profile.Image)}
+                                                        alt={profile.Name}
+                                                        sx={{
+                                                            width: 120,
+                                                            height: 120,
+                                                            border: '4px solid white',
+                                                            boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
+                                                        }}
+                                                    >
+                                                        <PersonIcon sx={{ fontSize: 60, color: '#9e9e9e' }} />
+                                                    </Avatar>
+                                                </CardMedia>
+                                                <CardContent>
+                                                    <Typography variant="h6" gutterBottom sx={{ color: '#c2185b' }}>
+                                                        {profile.Name}
+                                                    </Typography>
+                                                    <Box sx={{ mb: 1 }}>
+                                                        <Chip
+                                                            label={`${profile.Age} yrs`}
+                                                            size="small"
+                                                            color="black"
+                                                            sx={{ mr: 1, mb: 1 }}
+                                                        />
+
+                                                        {profile.Status == "Single"
+                                                            ? (
+                                                                <Chip label={profile.Status} size="small"
+                                                                    variant="outlined"
+
+                                                                    sx={{ mr: 1, mb: 1, color: '#66BB6A', }} />
+                                                            ) : (
+                                                                <Chip label={profile.Status} size="small"
+                                                                    variant="outlined"
+                                                                    color="primary"
+                                                                    sx={{ mr: 1, mb: 1, color: '#2c73d2', }} />
+                                                            )}
+                                                    </Box>
+                                                    <Box sx={{ display: 'flex', alignItems: 'center', mt: 1, color: 'text.secondary' }}>
+                                                        <WorkIcon fontSize="small" sx={{ mr: 0.5 }} />
+                                                        <Typography variant="body2" noWrap>
+                                                            {profile.Occupation || 'Not specified'}
+                                                        </Typography>
+                                                    </Box>
+                                                    <Box sx={{ display: 'flex', alignItems: 'center', mt: 0.5, color: 'text.secondary' }}>
+                                                        <SchoolIcon fontSize="small" sx={{ mr: 0.5 }} />
+                                                        <Typography variant="body2" noWrap>
+                                                            {profile.Education || 'Not specified'}
+                                                        </Typography>
+                                                    </Box>
+                                                    <Box sx={{ display: 'flex', alignItems: 'center', mt: 0.5, color: 'text.secondary' }}>
+                                                        <LocationOnIcon fontSize="small" sx={{ mr: 0.5 }} />
+                                                        <Typography variant="body2" noWrap>
+                                                            {profile.Address || 'Location not specified'}
+                                                        </Typography>
+                                                    </Box>
+                                                </CardContent>
+                                            </ProfileCard>
+                                        </Grid>
+                                    ))}
+                                </Grid>
+                            )}
+                        </StyledPaper>
+                    </Container>
+                </Box>
+                <ProfileDetailDialog
+                detailOpen={detailOpen}
+                setDetailOpen={setDetailOpen}
+                selectedProfile={selectedProfile}
+                getImageUrl={getImageUrl}
+                handleSendInterest={handleSendInterest}
+            />
+            </>
+        );
     }
-
-    const sql = `
-        SELECT
-            i.ID,
-            i.RequesterEmail,
-            i.ProfileID,
-            i.Intrest,
-            i.CreatedAt,
-            p.*
-        FROM interested i
-        INNER JOIN profile p
-            ON p.RegisterID = i.ProfileID
-        WHERE i.Intrest = 'Yes'
-          AND i.RequesterEmail = ?
-        ORDER BY i.CreatedAt DESC
-    `;
-
-    db.query(sql, [email], (err, results) => {
-        if (err) {
-            console.error("Error fetching Yes interests:", err);
-
-            return res.status(500).json({
-                error: "Database error",
-                details: err.message
-            });
-        }
-
-        res.status(200).json(results);
-    });
-};
-
-const getNoInterested = (req, res) => {
-    const { email } = req.params;
-
-    if (!email) {
-        return res.status(400).json({
-            error: "Email is required"
-        });
-    }
-
-    const sql = `
-        SELECT
-            i.ID,
-            i.RequesterEmail,
-            i.ProfileID,
-            i.Intrest,
-            i.CreatedAt,
-            p.*
-        FROM interested i
-        INNER JOIN profile p
-            ON p.RegisterID = i.ProfileID
-        WHERE i.Intrest IN ('Interested', 'No')
-          AND i.RequesterEmail = ?
-        ORDER BY i.CreatedAt DESC
-    `;
-
-    db.query(sql, [email], (err, results) => {
-        if (err) {
-            console.error("Error fetching Interested/No interests:", err);
-            return res.status(500).json({
-                error: "Database error",
-                details: err.message
-            });
-        }
-        res.status(200).json(results);
-    });
-};
-
-const getReceivedInterested = (req, res) => {
-    const { email } = req.params;
-
-    if (!email) {
-        return res.status(400).json({
-            error: "Email is required"
-        });
-    }
-
-    const sql = `
-        SELECT
-            i.ID,
-            i.RequesterEmail,
-            i.ProfileID,
-            i.Intrest,
-            i.CreatedAt,
-            p.*
-        FROM interested i
-        INNER JOIN profile p
-            ON p.Email = i.RequesterEmail
-        WHERE i.ProfileID = (
-            SELECT RegisterID FROM profile WHERE Email = ?
-        )
-        ORDER BY i.CreatedAt DESC
-    `;
-
-    db.query(sql, [email], (err, results) => {
-        if (err) {
-            console.error("Error fetching received interests:", err);
-            return res.status(500).json({
-                error: "Database error",
-                details: err.message
-            });
-        }
-        res.status(200).json(results);
-    });
-};
-
-module.exports = {
-    addInterested,
-    getInterested,
-    AllInterested,
-    updateInterest,
-    deleteInterest,
-    getYesInterested,
-    getNoInterested,
-    getReceivedInterested
-};

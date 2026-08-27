@@ -1,55 +1,56 @@
 const db = require("../config/database");
 
-
-
-const postIntrest = (req, res) => {
+const addInterested = (req, res) => {
     const { requesterEmail, profileId, intrest } = req.body;
-     if (!requesterEmail || !profileId || !intrest) {
+
+    if (!requesterEmail || !profileId) {
         return res.status(400).json({
-            error: "requesterEmail, profileId and intrest are required"
+            error: "requesterEmail and profileId are required"
         });
     }
-    db.query("SELECT id FROM interested WHERE RequesterEmail = ?", [requesterEmail], (err, existing) => {
-        if (err) {
-            console.error("Error checking existing profile:", err);
-            return res.status(500).json({ error: "Database error", details: err.message });
-        }
-        if (existing.length > 0) {
-            return res.status(409).json({
-                error: "A profile with this email already exists",
-                existingid: existing[0].id
-            });
-        }
-        const sql = `INSERT INTO interested () VALUES ( ?, ?, ?)`;
-        const values = [];
-        db.query(sql, values, (err, result) => {
+
+    const interestValue = intrest || "Interested"; // default value
+
+    db.query(
+        "SELECT id FROM interested WHERE RequesterEmail = ? AND ProfileID = ?",
+        [requesterEmail, profileId],
+        (err, existing) => {
             if (err) {
-                console.error("Database error:", err);
-                return res.status(500).json({
-                    error: "Failed to create profile",
-                    details: err.message
+                console.error("Error checking existing interest:", err);
+                return res.status(500).json({ error: "Database error", details: err.message });
+            }
+            if (existing.length > 0) {
+                return res.status(409).json({
+                    error: "Interest already exists for this profile",
+                    existingId: existing[0].id
                 });
             }
-            const token = jwt.sign({ id: result.insertId, email: email, name: name,},
-                SECRET_KEY,
-                { expiresIn: "1h" }
-            );
-            const imageUrl = image ? `http://localhost:${process.env.PORT || 5000}/${image}` : null;
-            res.status(201).json({
-                message: "Profile created successfully",
-                token,
-                profile: {
-                    RegisterID: result.insertId,
-                    Gender: gender, Name: name, Email: email, Age: age, DOB: dob, Contact: contact,
-                    Address: address, Language: language, Religion: religion, Education: education,
-                    Occupation: occupation, CompanyName: company, MonthlyIncome: income,
-                    Image: imageUrl, Status: status, Detail: detail, Physically: physical,
-                    Height: height, Member: member
+
+            const sql = `INSERT INTO interested (RequesterEmail, ProfileID, Intrest) VALUES (?, ?, ?)`;
+            const values = [requesterEmail, profileId, interestValue];
+
+            db.query(sql, values, (err, result) => {
+                if (err) {
+                    console.error("Database error:", err);
+                    return res.status(500).json({
+                        error: "Failed to create interest",
+                        details: err.message
+                    });
                 }
+
+                res.status(201).json({
+                    message: "Interest created successfully",
+                    interest: {
+                        ID: result.insertId,
+                        RequesterEmail: requesterEmail,
+                        ProfileID: profileId,
+                        Intrest: interestValue
+                    }
+                });
             });
-        });
-    });
-}
+        }
+    );
+};
 
 
 

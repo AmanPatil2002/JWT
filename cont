@@ -199,6 +199,12 @@ const getYesInterested = (req, res) => {
 const getNoInterested = (req, res) => {
     const { email } = req.params;
 
+    if (!email) {
+        return res.status(400).json({
+            error: "Email is required"
+        });
+    }
+
     const sql = `
         SELECT
             i.ID,
@@ -210,13 +216,14 @@ const getNoInterested = (req, res) => {
         FROM interested i
         INNER JOIN profile p
             ON p.RegisterID = i.ProfileID
-        WHERE i.Intrest = 'No'
+        WHERE i.Intrest IN ('Interested', 'No')
           AND i.RequesterEmail = ?
         ORDER BY i.CreatedAt DESC
     `;
+
     db.query(sql, [email], (err, results) => {
         if (err) {
-            console.error("Error fetching No interests:", err);
+            console.error("Error fetching Interested/No interests:", err);
             return res.status(500).json({
                 error: "Database error",
                 details: err.message

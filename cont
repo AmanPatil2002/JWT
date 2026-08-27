@@ -12,7 +12,7 @@ const addInterested = (req, res) => {
     const interestValue = intrest || "Interested"; // default value
 
     db.query(
-        "SELECT id FROM interested WHERE RequesterEmail = ? AND ProfileID = ?",
+        "SELECT ID FROM interested WHERE RequesterEmail = ? AND ProfileID = ?",
         [requesterEmail, profileId],
         (err, existing) => {
             if (err) {
@@ -22,7 +22,7 @@ const addInterested = (req, res) => {
             if (existing.length > 0) {
                 return res.status(409).json({
                     error: "Interest already exists for this profile",
-                    existingId: existing[0].id
+                    existingId: existing[0].ID
                 });
             }
 
@@ -51,8 +51,6 @@ const addInterested = (req, res) => {
         }
     );
 };
-
-
 
 const getInterested = (req, res) => {
     const { email } = req.params;
@@ -166,6 +164,12 @@ const deleteInterest = (req, res) => {
 const getYesInterested = (req, res) => {
     const { email } = req.params;
 
+    if (!email) {
+        return res.status(400).json({
+            error: "Email is required"
+        });
+    }
+
     const sql = `
         SELECT
             i.ID,
@@ -233,6 +237,44 @@ const getNoInterested = (req, res) => {
     });
 };
 
+const getReceivedInterested = (req, res) => {
+    const { email } = req.params;
+
+    if (!email) {
+        return res.status(400).json({
+            error: "Email is required"
+        });
+    }
+
+    const sql = `
+        SELECT
+            i.ID,
+            i.RequesterEmail,
+            i.ProfileID,
+            i.Intrest,
+            i.CreatedAt,
+            p.*
+        FROM interested i
+        INNER JOIN profile p
+            ON p.Email = i.RequesterEmail
+        WHERE i.ProfileID = (
+            SELECT RegisterID FROM profile WHERE Email = ?
+        )
+        ORDER BY i.CreatedAt DESC
+    `;
+
+    db.query(sql, [email], (err, results) => {
+        if (err) {
+            console.error("Error fetching received interests:", err);
+            return res.status(500).json({
+                error: "Database error",
+                details: err.message
+            });
+        }
+        res.status(200).json(results);
+    });
+};
+
 module.exports = {
     addInterested,
     getInterested,
@@ -240,6 +282,6 @@ module.exports = {
     updateInterest,
     deleteInterest,
     getYesInterested,
-    getNoInterested
-
+    getNoInterested,
+    getReceivedInterested
 };

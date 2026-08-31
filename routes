@@ -1,0 +1,17 @@
+const {
+    postIntrest,
+    getInterested,
+    getReceivedInterested, // add this
+    AllInterested,
+    updateInterest,
+    getYesInterested,
+    getNoInterested,
+} = require("../controller/intrestcontroller");
+
+router.post("/intrest", postIntrest);
+router.get("/intrest/sent/:email", getInterested);
+router.get("/intrest/received/:email", getReceivedInterested); // add this
+router.get("/intrest", AllInterested);
+router.put("/intrest/:email", updateInterest);
+router.get("/status/No/:email", getNoInterested);
+router.get("/status/Yes/:email", getYesInterested);

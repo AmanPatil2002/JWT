@@ -1,0 +1,363 @@
+import {
+    Box,
+    Container,
+    CssBaseline,
+    Grid,
+    Paper,
+    Typography,
+    Card,
+    CardContent,
+    CardMedia,
+    Button,
+    Alert,
+} from "@mui/material";
+import { styled } from "@mui/material/styles";
+import DeleteIcon from "@mui/icons-material/Delete";
+import AddIcon from "@mui/icons-material/Add";
+import { useState, useEffect } from "react";
+import axios from "axios";
+import Rejected from "../components/Rejected";
+
+const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
+
+const StyledPaper = styled(Paper)(({ theme }) => ({
+    padding: theme.spacing(3),
+    borderRadius: 16,
+    boxShadow: "0 8px 32px rgba(0,0,0,0.1)",
+    [theme.breakpoints.down("sm")]: {
+        padding: theme.spacing(2),
+        borderRadius: 12,
+    },
+}));
+
+const InterestCard = styled(Card)(() => ({
+    height: "100%",
+    transition: "transform 0.3s, box-shadow 0.3s",
+    cursor: "pointer",
+    position: "relative",
+    overflow: "hidden",
+}));
+
+
+export default function ShowInterest() {
+    const [profiles, setProfiles] = useState([]);
+    //const [intrest, setIntrest] = useState([]);
+    const [actionLoading, setActionLoading] = useState(null);
+    const currentUserEmail = localStorage.getItem("email");
+
+    useEffect(() => {
+        if (currentUserEmail) {
+            fetchInterestedProfiles();
+            // showIntrest();
+        } else {
+            setProfiles([]);
+
+        }
+    }, [currentUserEmail]);
+
+    //  const showIntrest = async () => {
+    //     try {
+    //         const res = await axios.get(`${API_URL}/user/intrest`);
+    //         setIntrest(res.data);
+    //     } catch (err) {
+    //         console.log("Error details:", err.response?.data || err.message);
+    //     }
+    // };
+
+    const fetchInterestedProfiles = async () => {
+        try {
+            const response = await axios.get(
+                `${API_URL}/user/intrest/sent/${encodeURIComponent(
+                    currentUserEmail
+                )}`
+            );
+
+            console.log(response.data)
+            const interests = Array.isArray(response.data)
+                ? response.data
+                : [];
+            setProfiles(interests);
+        } catch (err) {
+            console.error(
+                "Error fetching interested profiles:",
+                err.response?.data || err.message
+            );
+            setProfiles([]);
+        }
+    };
+
+    const acceptInterest = async (profile) => {
+        setActionLoading(profile.RegisterID);
+        try {
+            const response = await axios.put(
+                `${API_URL}/user/intrest/${encodeURIComponent(currentUserEmail)}`,
+                {
+                    intrest: "Yes",
+                    requesterEmail: currentUserEmail,
+                    profileId: profile.RegisterID,
+                }
+            );
+            console.log(response.data);
+            setProfiles((prev) =>
+                prev.filter(
+                    (item) => item.RegisterID !== profile.RegisterID
+                )
+            );
+        } catch (err) {
+            console.error(
+                "Error updating interest:",
+                err.response?.data || err.message
+            );
+        } finally {
+            setActionLoading(null);
+        }
+    };
+
+    const rejectInterest = async (profile) => {
+        setActionLoading(profile.RegisterID);
+        try {
+            const response = await axios.put(
+                `${API_URL}/user/intrest/${encodeURIComponent(currentUserEmail)}`,
+                {
+                    intrest: "No",
+                    requesterEmail: currentUserEmail,
+                    profileId: profile.RegisterID,
+                }
+            );
+            console.log(response.data);
+            setProfiles((prev) =>
+                prev.filter(
+                    (item) => item.RegisterID !== profile.RegisterID
+                )
+            );
+        } catch (err) {
+            console.error(
+                "Error updating interest:",
+                err.response?.data || err.message
+            );
+        } finally {
+            setActionLoading(null);
+        }
+    };
+
+
+    const getImageUrl = (imagePath) => {
+        if (!imagePath) return null;
+        if (imagePath.startsWith('http')) return imagePath;
+        const cleanPath = imagePath.replace(/^\/+/, '');
+        return `${API_URL}/${cleanPath}`;
+    };
+
+    return (
+        <>
+            <CssBaseline />
+            <Box
+                sx={{
+                    minHeight: { xs: '60vh', sm: '50vh', md: '50vh' },
+                    background: "#e3e3e3",
+                    py: { xs: 2, sm: 3, md: 4 },
+                    px: { xs: 1, sm: 2, md: 0 },
+                }}
+            >
+                <Container maxWidth="xl">
+                    <StyledPaper elevation={3}>
+                        <Typography
+                            variant="h5"
+                            fontWeight={700}
+                            gutterBottom
+                        >
+                            Interest Request
+                        </Typography>
+
+                        {!currentUserEmail && (
+                            <Alert severity="warning">
+                                Please log in to view your interests.
+                            </Alert>
+                        )}
+                        {profiles.length === 0 ? (
+                            currentUserEmail && (
+                                <Typography>
+                                    You haven't marked interest in any profiles
+                                    yet.
+                                </Typography>
+                            )
+                        ) : (
+                            <Grid container spacing={2}>
+                                {profiles.map((profile) => {
+                                    return (
+                                        <Grid item size={{ xs: 12, sm: 6, md: 4, lg: 3 }} spacing={2}
+                                            key={profile.ID}
+                                        >
+                                            <InterestCard elevation={2}>
+                                                {profile.RequesterEmail == currentUserEmail && (
+                                                    <>
+                                                        <CardMedia
+                                                            component="img"
+                                                            src={getImageUrl(profile.Image)}
+                                                            alt={profile.Name || "Profile"}
+                                                            sx={{
+                                                                width: "100%",
+                                                                maxHeight: {
+                                                                    xs: 280,
+                                                                    sm: 260,
+                                                                    md: 300,
+                                                                },
+                                                                objectFit: "cover",
+                                                            }}
+                                                            onError={(event) => {
+                                                                event.currentTarget.style.display = "none";
+                                                            }}
+                                                        />
+                                                        <CardContent
+                                                            sx={{
+                                                                display: "flex",
+                                                                flexDirection: "column",
+                                                            }}
+                                                        >
+                                                            <Typography
+                                                                variant="h5"
+                                                                fontWeight={200}
+                                                                sx={{
+                                                                    textAlign: "center",
+                                                                }}
+                                                            >
+                                                                {profile.Name || "Unknown"}
+                                                            </Typography>
+                                                            {profile.Intrest === "Intrested" && (
+                                                                <Typography
+                                                                    variant="body2"
+                                                                    sx={{
+                                                                        textAlign: "center",
+                                                                        color: 'gray',
+                                                                    }}
+                                                                >
+                                                                    Waiting for Response
+                                                                </Typography>
+                                                            )}
+                                                        </CardContent>
+                                                    </>
+                                                )}
+                                            </InterestCard>
+                                        </Grid>
+                                    );
+                                })}
+                            </Grid>
+                        )}
+                    </StyledPaper>
+                    <br/>
+                    <StyledPaper>
+                         <Typography
+                            variant="h5"
+                            fontWeight={700}
+                            gutterBottom
+                        >
+                            Requested Intrests
+                        </Typography>
+
+                        {!currentUserEmail && (
+                            <Alert severity="warning">
+                                Please log in to view your Requests.
+                            </Alert>
+                        )}
+                        {profiles.length === 0 ? (
+                            currentUserEmail && (
+                                <Typography>
+                                    You haven't received interest from any profiles
+                                    yet.
+                                </Typography>
+                            )
+                        ) : (
+                            <Grid container spacing={2}>
+                                {profiles.map((profile) => {
+                                    const isProcessing = actionLoading === profile.RegisterID;
+                                    return (
+                                        <Grid item size={{ xs: 12, sm: 6, md: 4, lg: 3 }} spacing={2}
+                                            key={profile.ID}
+                                        >
+                                            <InterestCard elevation={2}>
+                                                {/* {profile.RequesterEmail &&( */}
+                                                    <>
+                                                        <CardMedia
+                                                            component="img"
+                                                            src={getImageUrl(profile.Image)}
+                                                            alt={profile.Name || "Profile"}
+                                                            sx={{
+                                                                width: "100%",
+                                                                maxHeight: {
+                                                                    xs: 280,
+                                                                    sm: 260,
+                                                                    md: 300,
+                                                                },
+                                                                objectFit: "cover",
+                                                            }}
+                                                            onError={(event) => {
+                                                                event.currentTarget.style.display = "none";
+                                                            }}
+                                                        />
+                                                        <CardContent
+                                                            sx={{
+                                                                display: "flex",
+                                                                flexDirection: "column",
+                                                            }}
+                                                        >
+                                                            <Typography
+                                                                variant="body1"
+                                                                fontWeight={200}
+                                                                sx={{
+                                                                    textAlign: "center",
+
+                                                                }}
+                                                            >
+                                                                {profile.Name || "Unknown"}
+                                                            </Typography>
+                                                            <Box
+                                                                sx={{
+                                                                    display: "flex",
+                                                                    justifyContent: "center",
+                                                                    alignItems: "center",
+                                                                    gap: 1,
+                                                                    pt: 1,
+                                                                    borderTop: "1px solid",
+                                                                    borderColor: "divider",
+                                                                }}
+                                                            >
+                                                                <Button
+                                                                    variant="contained"
+                                                                    color="success"
+                                                                    size="small"
+
+                                                                    disabled={isProcessing}
+                                                                    onClick={() => acceptInterest(profile)}
+                                                                    startIcon={<AddIcon />}
+                                                                >
+                                                                    {isProcessing
+                                                                        ? "Processing..."
+                                                                        : "Accept"}
+                                                                </Button>
+                                                                <Button
+                                                                    variant="outlined"
+                                                                    color="error"
+                                                                    size="small"
+                                                                    disabled={isProcessing}
+                                                                    onClick={() => rejectInterest(profile)}
+                                                                    startIcon={<DeleteIcon />}
+                                                                >
+                                                                    Reject
+                                                                </Button>
+                                                            </Box>
+                                                        </CardContent>
+                                                    </>
+                                                {/* )} */}
+                                            </InterestCard>
+                                        </Grid>
+                                    );
+                                })}
+                            </Grid>
+                        )}
+                    </StyledPaper>
+                </Container>
+                <Rejected />
+            </Box>
+        </>
+    );
+}

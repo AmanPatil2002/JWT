@@ -1,0 +1,48 @@
+const getReceivedInterested = (req, res) => {
+    const { email } = req.params;
+    if (!email) {
+        return res.status(400).json({
+            error: "Email is required"
+        });
+    }
+
+    // Profiles that sent "Intrested" TO my profile (identified by my email)
+    const sql = `
+        SELECT
+            i.ID,
+            i.RequesterEmail,
+            i.ProfileID,
+            i.Intrest,
+            i.CreatedAt,
+            p.*
+        FROM interested i
+        INNER JOIN profile p
+            ON p.Email = i.RequesterEmail
+        INNER JOIN profile me
+            ON me.RegisterID = i.ProfileID
+        WHERE i.Intrest = 'Intrested'
+          AND me.Email = ?
+        ORDER BY i.CreatedAt DESC
+    `;
+
+    db.query(sql, [email], (err, results) => {
+        if (err) {
+            console.error("Error fetching received interests:", err);
+            return res.status(500).json({
+                error: "Database error",
+                details: err.message
+            });
+        }
+        res.status(200).json(results);
+    });
+};
+
+module.exports = {
+    postIntrest,
+    getInterested,
+    getReceivedInterested, // add this
+    AllInterested,
+    updateInterest,
+    getYesInterested,
+    getNoInterested
+};

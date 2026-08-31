@@ -1,3 +1,260 @@
+const express = require("express");
+const router = express.Router();
+const {
+    postIntrest,
+    getInterested,
+    AllInterested,
+    updateInterest,
+    getYesInterested,
+    getNoInterested,
+} = require("../controller/intrestcontroller");
+
+
+router.post("/intrest", postIntrest);
+router.get("/intrest/sent/:email", getInterested);
+router.get("/intrest",AllInterested)
+router.put("/intrest/:email", updateInterest);
+router.get("/status/No/:email", getNoInterested);
+router.get("/status/Yes/:email", getYesInterested);
+
+module.exports = router;
+
+
+
+
+const db = require("../config/database");
+
+const postIntrest = (req, res) => {
+    const { requesterEmail, profileId, intrest } = req.body;
+
+    if (!requesterEmail || !profileId || !intrest) {
+        return res.status(400).json({
+            error: "requesterEmail, profileId and intrest are required"
+        });
+    }
+
+    const checkSql = `
+        SELECT * FROM interested WHERE RequesterEmail = ? AND ProfileID = ? AND Intrest = ?`;
+
+    db.query(
+        checkSql,
+        [requesterEmail, profileId, intrest],
+        (err, rows) => {
+            if (err) {
+                console.error("Database error:", err);
+                return res.status(500).json({
+                    error: "Failed to check existing interest",
+                    details: err.message
+                });
+            }
+
+            if (rows.length > 0) {
+                return res.status(409).json({
+                    error: "Interest already exists",
+                    profile: {
+                        requesterEmail,
+                        profileId,
+                        intrest
+                    }
+                });
+            }
+
+            const insertSql = `
+                INSERT INTO interested
+                (RequesterEmail, ProfileID, Intrest)
+                VALUES (?, ?, ?)
+            `;
+
+            db.query(
+                insertSql,
+                [requesterEmail, profileId, intrest],
+                (err, result) => {
+                    if (err) {
+                        console.error("Database error:", err);
+                        return res.status(500).json({
+                            error: "Failed to create interest",
+                            details: err.message
+                        });
+                    }
+                    return res.status(201).json({
+                        message: "Interest Sent",
+                        profile: {
+                            requesterEmail,
+                            profileId,
+                            intrest
+                        }
+                    });
+                }
+            );
+        }
+    );
+};
+
+
+
+
+const getInterested = (req, res) => {
+    const { email } = req.params;
+    if (!email) {
+        return res.status(400).json({
+            error: "Email is required"
+        });
+    }
+    const sql = `
+        SELECT
+            i.ID,
+            i.RequesterEmail,
+            i.ProfileID,
+            i.Intrest,
+            i.CreatedAt,
+            p.*
+        FROM interested i
+        INNER JOIN profile p
+            ON p.RegisterID = i.ProfileID
+        WHERE i.Intrest = 'Intrested'
+          AND i.RequesterEmail = ?
+        ORDER BY i.CreatedAt DESC
+    `;
+    db.query(sql, [email], (err, results) => {
+        if (err) {
+            console.error("Error fetching interested profiles:", err);
+            return res.status(500).json({
+                error: "Database error",
+                details: err.message
+            });
+        }
+        res.status(200).json(results);
+    });
+};
+
+
+// Admin
+const AllInterested = (req, res) => {
+    db.query("SELECT * FROM interested", (err, result) => {
+        if (err) return res.status(500).json(err);
+        res.json(result);
+    });
+};
+//////////
+
+const updateInterest = (req, res) => {
+    const { requesterEmail, profileId, intrest } = req.body;
+    if (!requesterEmail || !profileId || !intrest) {
+        return res.status(400).json({
+            error: "requesterEmail, profileId and intrest are required"
+        });
+    }
+    const sql = `UPDATE interested SET Intrest = ? WHERE RequesterEmail = ? AND ProfileID = ? `;
+
+    db.query(
+        sql,
+        [intrest, requesterEmail, profileId],
+        (err, result) => {
+            if (err) {
+                console.error("Error updating interest:", err);
+                return res.status(500).json({
+                    error: "Database error",
+                    details: err.message
+                });
+            }
+            if (result.affectedRows === 0) {
+                return res.status(404).json({
+                    error: "Interested record not found"
+                });
+            }
+            res.status(200).json({
+                message: "Interest updated successfully",
+                requesterEmail,
+                profileId,
+                intrest
+            });
+        }
+    );
+};
+
+
+const getYesInterested = (req, res) => {
+    const { email } = req.params;
+    const sql = `
+        SELECT
+            i.ID,
+            i.RequesterEmail,
+            i.ProfileID,
+            i.Intrest,
+            i.CreatedAt,
+            p.*
+        FROM interested i
+        INNER JOIN profile p
+            ON p.RegisterID = i.ProfileID
+        WHERE i.Intrest = 'Yes'
+          AND i.RequesterEmail = ?
+        ORDER BY i.CreatedAt DESC
+    `;
+
+    db.query(sql, [email], (err, results) => {
+        if (err) {
+            console.error("Error fetching Yes interests:", err);
+
+            return res.status(500).json({
+                error: "Database error",
+                details: err.message
+            });
+        }
+
+        res.status(200).json(results);
+    });
+};
+
+const getNoInterested = (req, res) => {
+    const { email } = req.params;
+
+    const sql = `
+        SELECT
+            i.ID,
+            i.RequesterEmail,
+            i.ProfileID,
+            i.Intrest,
+            i.CreatedAt,
+            p.*
+        FROM interested i
+        INNER JOIN profile p
+            ON p.RegisterID = i.ProfileID
+        WHERE i.Intrest = 'No'
+          AND i.RequesterEmail = ?
+        ORDER BY i.CreatedAt DESC
+    `;
+    db.query(sql, [email], (err, results) => {
+        if (err) {
+            console.error("Error fetching No interests:", err);
+            return res.status(500).json({
+                error: "Database error",
+                details: err.message
+            });
+        }
+        res.status(200).json(results);
+    });
+};
+
+
+
+module.exports = {
+    postIntrest,
+    getInterested,
+    AllInterested,
+    updateInterest,
+    getYesInterested,
+    getNoInterested
+};
+
+
+
+
+
+
+
+
+
+
 import {
     Box,
     Container,

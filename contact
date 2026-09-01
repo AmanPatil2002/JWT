@@ -1,0 +1,90 @@
+
+import {
+    Box,
+    Typography,
+    Card,
+    CardContent,
+    Grid,
+} from "@mui/material";
+import { useState, useEffect } from "react";
+import axios from "axios";
+const API_URL = import.meta.env.VITE_API_URL;
+import { LocationOn, Phone, Email } from "@mui/icons-material";
+
+function Contact() {
+    const [contact, setcontact] = useState([])
+
+    useEffect(() => {
+        showContact();
+    }, []);
+
+    const showContact = async () => {
+        try {
+            const res = await axios.get(`${API_URL}/contact`);
+            console.log("API Response:", res.data);
+            setcontact(res.data);
+        } catch (err) {
+            console.log("Error details:", err.response?.data || err.message);
+        }
+    };
+
+    return (
+        <Box sx={{ backgroundColor: "#f8f9fa", py: 6, minHeight:{xs:'30vh',sm:'70vh'}}}>
+            <Typography variant="h3" align="center" fontWeight="bold" gutterBottom>
+                Contact Us
+            </Typography>
+            <Typography
+                variant="body1"
+                align="center"
+                color="text.secondary"
+                mb={5}
+                sx={{ paddingBottom: 5 }}
+            >
+                We'd love to hear from you. Feel free to reach out anytime.
+            </Typography>
+            {contact.map((info)=>(
+            <Grid container spacing={{ xs: 3, md: 3 }} columns={{ xs: 4, sm: 8, md: 10 }}>
+                <Grid size={{ xs: 4, sm: 8, md: 10 }}>
+                    <Card elevation={4} sx={{ marginLeft: 8, marginRight: 8 }}>
+                        <CardContent className="text-center">
+                            <LocationOn sx={{ fontSize: 45, color: 'rgb(163, 65, 65)' }} />
+                            <Typography variant="h6" mt={2}>
+                                Address
+                            </Typography>
+                            <Typography color="text.secondary">
+                                {info.Address}
+                            </Typography>
+                        </CardContent>
+                    </Card>
+                </Grid>
+                <Grid size={{ xs: 4, sm: 8, md: 10 }}>
+                    <Card elevation={4} sx={{ marginLeft: 8, marginRight: 8 }}>
+                        <CardContent className="text-center">
+                            <Phone sx={{ fontSize: 45, color: 'rgb(163, 65, 65)' }} />
+                            <Typography variant="h6" mt={2}>
+                                Phone
+                            </Typography>
+                            <Typography color="text.secondary">{info.Contact}</Typography>
+                        </CardContent>
+                    </Card>
+                </Grid>
+                <Grid size={{ xs: 4, sm: 8, md: 10 }}>
+                    <Card elevation={4} sx={{ marginLeft: 8, marginRight: 8}}>
+                        <CardContent className="text-center">
+                            <Email sx={{ fontSize: 45, color: 'rgb(163, 65, 65)' }} />
+                            <Typography variant="h6" mt={2}>
+                                Email
+                            </Typography>
+                            <Typography color="text.secondary">
+                                {info.Email}
+                            </Typography>
+                        </CardContent>
+                    </Card>
+                </Grid>
+            </Grid>
+            ))}
+        </Box>
+    );
+}
+
+export default Contact;

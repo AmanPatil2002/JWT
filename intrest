@@ -1062,7 +1062,6 @@ export default function Intrest() {
     const [error, setError] = useState(false);
     const [selectedProfile, setSelectedProfile] = useState(null);
     const [detailOpen, setDetailOpen] = useState(false);
-
     const [isPremium, setIsPremium] = useState(false);
     const [checkingMembership, setCheckingMembership] = useState(true);
     const [message, setMessage] = useState([]);

@@ -1,36 +1,50 @@
 # JWT Authentication System
 
-A full-stack web application demonstrating JWT (JSON Web Token) authentication with a React frontend and Express.js backend. This project showcases secure authentication patterns, user session management, and protected routes.
+A full-stack web application demonstrating JWT (JSON Web Token) authentication with a React frontend and an Express.js backend. It shows token-based authentication, user session handling, and protected routes.
+
+## Table of Contents
+
+- [Features](#features)
+- [Tech Stack](#tech-stack)
+- [Project Structure](#project-structure)
+- [Getting Started](#getting-started)
+- [Available Scripts](#available-scripts)
+- [API Endpoints](#api-endpoints)
+- [Authentication Flow](#authentication-flow)
+- [Security Notes](#security-notes)
+- [Future Enhancements](#future-enhancements)
+- [Author](#author)
 
 ## Features
 
-- **JWT Authentication**: Secure token-based authentication system
-- **User Login & Registration**: Complete authentication flow
-- **Protected Routes**: Role-based access control
-- **Student Dashboard**: Display student information with mock data
-- **Responsive UI**: Built with Bootstrap and Tailwind CSS
-- **REST API**: Express.js backend with proper middleware
-- **Database Integration**: MySQL for data persistence
-- **Environment Configuration**: Secure environment variable management
+- JWT-based authentication
+- User registration and login
+- Protected frontend routes and protected API endpoints
+- Student dashboard displaying student information (mock data)
+- Responsive UI built with Bootstrap and Tailwind CSS
+- REST API with middleware for token verification
+- MySQL database for data persistence
+- Secrets and configuration kept in environment variables
 
 ## Tech Stack
 
-### Frontend
-- **React 19** - UI library
-- **Vite** - Build tool and dev server
-- **React Router DOM** - Client-side routing
-- **Bootstrap 5** - UI components
-- **Tailwind CSS** - Utility-first CSS framework
-- **Faker.js** - Generate mock data
+**Frontend**
 
-### Backend
-- **Node.js** - Runtime environment
-- **Express.js** - Web framework
-- **JWT (jsonwebtoken)** - Token authentication
-- **MySQL2** - Database driver
-- **Dotenv** - Environment variable management
-- **CORS** - Cross-origin resource sharing
-- **Nodemon** - Development auto-reload
+- React 19
+- Vite
+- React Router DOM
+- Bootstrap 5
+- Tailwind CSS
+- Faker.js (mock data)
+
+**Backend**
+
+- Node.js and Express.js
+- `jsonwebtoken` (JWT)
+- `mysql2`
+- `dotenv`
+- `cors`
+- `nodemon` (development auto-reload)
 
 ## Project Structure
 
@@ -38,42 +52,38 @@ A full-stack web application demonstrating JWT (JSON Web Token) authentication w
 JWT/
 ├── frontend/                 # React application
 │   ├── src/
-│   │   ├── components/      # React components
-│   │   ├── utils/           # Utility functions
-│   │   └── App.jsx          # Main component
+│   │   ├── components/       # React components
+│   │   ├── utils/            # Utility functions
+│   │   └── App.jsx           # Main component
 │   └── package.json
 ├── backend/                  # Express server
-│   ├── config/              # Configuration files
-│   ├── controller/          # Route controllers
-│   ├── middleware/          # Custom middleware (JWT)
-│   ├── routes/              # API routes
-│   ├── server.js            # Entry point
-│   ├── .env                 # Environment variables
+│   ├── config/               # Configuration files
+│   ├── controller/           # Route controllers
+│   ├── middleware/           # Custom middleware (JWT verification)
+│   ├── routes/               # API routes
+│   ├── server.js             # Entry point
 │   └── package.json
 └── README.md
 ```
 
-## Installation
+## Getting Started
 
 ### Prerequisites
+
 - Node.js (v14 or higher)
 - MySQL Server
 - npm or yarn
 
-### Backend Setup
+### Backend
 
-1. Navigate to backend directory:
 ```bash
 cd backend
-```
-
-2. Install dependencies:
-```bash
 npm install
 ```
 
-3. Configure environment variables in `.env`:
-```
+Create `backend/.env`:
+
+```env
 PORT=5000
 DB_HOST=localhost
 DB_USER=root
@@ -82,89 +92,78 @@ DB_NAME=jwt_auth
 JWT_SECRET=your_secret_key
 ```
 
-4. Start the server:
+Start the server:
+
 ```bash
 npm run dev
 ```
 
-### Frontend Setup
+### Frontend
 
-1. Navigate to frontend directory:
 ```bash
 cd frontend
-```
-
-2. Install dependencies:
-```bash
 npm install
-```
-
-3. Start the development server:
-```bash
 npm run dev
 ```
 
-The application will open at `http://localhost:5173`
+The app runs at `http://localhost:5173`.
+
+> Never commit your `.env` file. Use a long, random value for `JWT_SECRET`.
 
 ## Available Scripts
 
-### Frontend
-- `npm run dev` - Start development server with auto-open
-- `npm run build` - Build for production
-- `npm run lint` - Run ESLint
-- `npm run preview` - Preview production build
+**Frontend**
 
-### Backend
-- `npm run dev` - Start server with nodemon (auto-reload)
+| Command | Description |
+| --- | --- |
+| `npm run dev` | Start the development server |
+| `npm run build` | Build for production |
+| `npm run lint` | Run ESLint |
+| `npm run preview` | Preview the production build |
+
+**Backend**
+
+| Command | Description |
+| --- | --- |
+| `npm run dev` | Start the server with nodemon (auto-reload) |
 
 ## API Endpoints
 
-### Authentication
-- `POST /api/auth/register` - User registration
-- `POST /api/auth/login` - User login
-- `POST /api/auth/logout` - User logout
-
-### User
-- `GET /api/user/profile` - Get user profile (protected)
-- `GET /api/user/student` - Get student information (protected)
+| Method | Endpoint | Description | Protected |
+| --- | --- | --- | --- |
+| POST | `/api/auth/register` | Register a user | No |
+| POST | `/api/auth/login` | Log in and receive a JWT | No |
+| POST | `/api/auth/logout` | Log out | No |
+| GET | `/api/user/profile` | Get the user profile | Yes |
+| GET | `/api/user/student` | Get student information | Yes |
 
 ## Authentication Flow
 
-1. User registers with email and password
-2. Backend stores hashed password in MySQL
-3. User logs in with credentials
-4. Backend generates JWT token
-5. Frontend stores token in localStorage/sessionStorage
-6. Token is included in Authorization header for protected routes
-7. Backend middleware verifies token on each request
+1. The user registers with an email and password.
+2. The backend stores the hashed password in MySQL.
+3. The user logs in with their credentials.
+4. The backend generates a JWT.
+5. The frontend stores the token on the client.
+6. The token is sent in the `Authorization` header for protected routes.
+7. Backend middleware verifies the token on each protected request.
 
-## Security Features
+## Security Notes
 
-- ✅ JWT token-based authentication
-- ✅ Password hashing
-- ✅ CORS protection
-- ✅ Protected API routes
-- ✅ Environment variables for sensitive data
-- ✅ Middleware validation
+- Passwords are hashed before storage.
+- Protected API routes are guarded by JWT verification middleware.
+- CORS is configured on the backend.
+- Sensitive values live in environment variables, not in the code.
 
 ## Future Enhancements
 
 - [ ] Token refresh mechanism
 - [ ] Role-based authorization
 - [ ] Email verification
-- [ ] Password reset functionality
+- [ ] Password reset
 - [ ] User profile management
 - [ ] Admin dashboard
 - [ ] Test suite
 
-## Contributing
+## Author
 
-Feel free to fork this project and submit pull requests for any improvements.
-
-## License
-
-This project is open source and available under the MIT License.
-
-## Contact
-
-For questions or suggestions, please open an issue in the repository.
+**Aman Patil** — [@AmanPatil2002](https://github.com/AmanPatil2002)
